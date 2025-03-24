@@ -301,6 +301,54 @@ The process followed to diagnose and fix these issues:
    - All integration and unit tests run in CI without failures
    - Documented all fixes for future reference
 
+### 9. Fixed Dashboard Test Parameter Mismatches (March 2025)
+
+When extending the Docker configuration for production use, we encountered CI test failures:
+
+1. **Dashboard integration test parameter mismatch**:
+   - Error: `TypeError: create_time_series_chart() got an unexpected keyword argument 'x'`
+   - The test in `tests/integration/test_dashboard_integration.py` was calling chart functions with incorrect parameter names
+   - The test was using `x='date', y='value'` while the function expected `x_column='date', y_columns=['value']`
+
+2. **Forecast chart parameter mismatch**:
+   - The test was using `actual_col`, `forecast_col`, and `date_col` parameters
+   - The function actually expected `historical_df`, `forecast_df`, `date_column`, and `value_column`
+
+Fix: Updated the test to use the correct parameter names:
+
+```python
+# Before
+time_series_fig = create_time_series_chart(df, x='date', y='value', title='Test Time Series')
+
+# After
+time_series_fig = create_time_series_chart(df, x_column='date', y_columns=['value'], title='Test Time Series', id_prefix='test')
+
+# Before
+forecast_fig = create_forecast_chart(
+    forecast_df, 
+    actual_col='value', 
+    forecast_col='forecast', 
+    date_col='date',
+    upper_bound_col='upper',
+    lower_bound_col='lower',
+    title='Test Forecast'
+)
+
+# After
+forecast_fig = create_forecast_chart(
+    historical_df=df,
+    forecast_df=forecast_df, 
+    date_column='date',
+    value_column='value',
+    lower_bound='lower',
+    upper_bound='upper',
+    title='Test Forecast',
+    id_prefix='test'
+)
+```
+
+The fix was committed and pushed, and all tests now pass successfully.
+
 ## Future Work
 
 1. **Re-enable Type Checking**: 
