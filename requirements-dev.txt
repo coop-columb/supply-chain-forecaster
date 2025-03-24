@@ -7,10 +7,12 @@ pytest-mock==3.11.1
 black==23.7.0
 flake8==6.0.0
 isort==5.12.0
-mypy==1.4.1
+# Downgraded mypy to be compatible with typing-extensions==4.5.0
+mypy==1.3.0
 
 # Documentation
-sphinx==7.1.1
+# Downgraded sphinx to be compatible with sphinx-rtd-theme
+sphinx==6.2.1
 sphinx-rtd-theme==1.2.2
 
 # Pre-commit hooks
