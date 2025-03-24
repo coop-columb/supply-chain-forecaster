@@ -1,0 +1,3 @@
+# Placeholder for API screenshots
+
+Replace this file with actual PNG screenshots of the API (e.g., Swagger UI).

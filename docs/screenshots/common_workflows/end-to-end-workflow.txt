@@ -1,0 +1,3 @@
+# Placeholder for common workflow screenshots
+
+Replace this file with actual PNG screenshots illustrating common workflows.

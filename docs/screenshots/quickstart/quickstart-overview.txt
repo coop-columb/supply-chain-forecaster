@@ -1,0 +1,3 @@
+# Placeholder for quickstart screenshots
+
+Replace this file with actual PNG screenshots for the quickstart guide.

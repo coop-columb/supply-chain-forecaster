@@ -1,0 +1,3 @@
+# Placeholder for anomaly detection screenshots
+
+Replace this file with actual PNG screenshots of the anomaly detection interface.

@@ -1,0 +1,3 @@
+# Placeholder for model management screenshots
+
+Replace this file with actual PNG screenshots of the model management interface.
