@@ -197,6 +197,9 @@ venv/
 ENV/
 .python-version
 
+# GitHub configuration
+branch_protection.json
+
 # Python compiled files
 __pycache__/
 *.py[cod]
