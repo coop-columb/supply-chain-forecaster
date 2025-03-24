@@ -172,3 +172,52 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+# Data files
+data/raw/*
+data/processed/*
+data/external/*
+\!data/raw/.gitkeep
+\!data/processed/.gitkeep
+\!data/external/.gitkeep
+
+# Model files
+models/training/*.pkl
+models/training/*.joblib
+models/deployment/*.pkl
+models/deployment/*.joblib
+\!models/training/.gitkeep
+\!models/evaluation/.gitkeep
+\!models/deployment/.gitkeep
+
+# Environment
+.env
+.venv
+env/
+venv/
+ENV/
+.python-version
+
+# Python compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Jupyter Notebook
+.ipynb_checkpoints
