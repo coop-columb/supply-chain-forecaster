@@ -75,7 +75,7 @@ def test_dashboard_charts_components(dashboard_app):
         })
         
         # Test time series chart
-        time_series_fig = create_time_series_chart(df, x='date', y='value', title='Test Time Series')
+        time_series_fig = create_time_series_chart(df, x_column='date', y_columns=['value'], title='Test Time Series', id_prefix='test')
         assert time_series_fig is not None, "Time series chart creation failed"
         
         # Test forecast chart (with mocked forecast values)
@@ -85,13 +85,14 @@ def test_dashboard_charts_components(dashboard_app):
         forecast_df['lower'] = forecast_df['forecast'] * 0.9
         
         forecast_fig = create_forecast_chart(
-            forecast_df, 
-            actual_col='value', 
-            forecast_col='forecast', 
-            date_col='date',
-            upper_bound_col='upper',
-            lower_bound_col='lower',
-            title='Test Forecast'
+            historical_df=df,
+            forecast_df=forecast_df, 
+            date_column='date',
+            value_column='value',
+            lower_bound='lower',
+            upper_bound='upper',
+            title='Test Forecast',
+            id_prefix='test'
         )
         assert forecast_fig is not None, "Forecast chart creation failed"
         
