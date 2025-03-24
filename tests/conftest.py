@@ -1,13 +1,15 @@
 """Test configuration for the supply chain forecaster."""
 
 import os
-import pytest
-import pandas as pd
-import numpy as np
-from pathlib import Path
 
 # Add the project root to the Python path to fix imports
 import sys
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import pytest
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 # Use try/except to handle missing modules during testing

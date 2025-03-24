@@ -135,9 +135,9 @@ class LSTMModel(ModelBase):
             Compiled LSTM model.
         """
         import tensorflow as tf
-        from tensorflow.keras.models import Sequential
-        from tensorflow.keras.layers import LSTM, Dense, Dropout
         from tensorflow.keras.callbacks import EarlyStopping
+        from tensorflow.keras.layers import LSTM, Dense, Dropout
+        from tensorflow.keras.models import Sequential
         
         model = Sequential()
         
@@ -195,8 +195,8 @@ class LSTMModel(ModelBase):
         """
         try:
             import tensorflow as tf
-            from tensorflow.keras.callbacks import EarlyStopping
             from sklearn.preprocessing import StandardScaler
+            from tensorflow.keras.callbacks import EarlyStopping
         except ImportError:
             logger.error(
                 "TensorFlow or scikit-learn not installed. "
@@ -399,7 +399,7 @@ class LSTMModel(ModelBase):
             Path to the saved model.
         """
         import tensorflow as tf
-        
+
         # Use default path if not provided
         if path is None:
             path = self.metadata.get("path")
@@ -437,7 +437,7 @@ class LSTMModel(ModelBase):
             Loaded model instance.
         """
         import tensorflow as tf
-        
+
         # Load metadata and other components
         model_instance = super().load(path)
         

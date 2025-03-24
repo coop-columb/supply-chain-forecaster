@@ -93,9 +93,9 @@ class AutoencoderDetector(ModelBase):
             Tuple of (encoder model, autoencoder model).
         """
         import tensorflow as tf
+        from tensorflow.keras.layers import Dense, Dropout, Input
         from tensorflow.keras.models import Model
-        from tensorflow.keras.layers import Input, Dense, Dropout
-        
+
         # Input layer
         input_layer = Input(shape=(input_dim,))
         
@@ -150,8 +150,8 @@ class AutoencoderDetector(ModelBase):
         """
         try:
             import tensorflow as tf
-            from tensorflow.keras.callbacks import EarlyStopping
             from sklearn.preprocessing import StandardScaler
+            from tensorflow.keras.callbacks import EarlyStopping
         except ImportError:
             logger.error(
                 "TensorFlow or scikit-learn not installed. "
@@ -369,9 +369,9 @@ class AutoencoderDetector(ModelBase):
         Returns:
             Path to the saved model.
         """
-        import tensorflow as tf
         import joblib
-        
+        import tensorflow as tf
+
         # Use default path if not provided
         if path is None:
             path = self.metadata.get("path")
@@ -429,9 +429,9 @@ class AutoencoderDetector(ModelBase):
         Returns:
             Loaded model instance.
         """
-        import tensorflow as tf
         import joblib
-        
+        import tensorflow as tf
+
         # Load metadata and other components
         model_instance = super().load(path)
         

@@ -1,11 +1,11 @@
 """Anomaly detection page for the supply chain forecaster dashboard."""
 
-from dash import dcc, html, dash_table
 import dash_bootstrap_components as dbc
+from dash import dash_table, dcc, html
 
+from dashboard.components.charts import create_anomaly_chart
 from dashboard.components.data_upload import create_upload_component
 from dashboard.components.model_selection import create_model_selection
-from dashboard.components.charts import create_anomaly_chart
 
 
 def create_anomaly_layout():

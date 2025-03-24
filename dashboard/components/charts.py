@@ -1,11 +1,11 @@
 """Chart components for the supply chain forecaster dashboard."""
 
-import plotly.graph_objs as go
-import plotly.express as px
-import pandas as pd
-import numpy as np
-from dash import dcc, html
 import dash_bootstrap_components as dbc
+import numpy as np
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objs as go
+from dash import dcc, html
 
 
 def create_time_series_chart(df, x_column, y_columns, title, id_prefix):

@@ -9,7 +9,7 @@ import pandas as pd
 
 from api.models.model_service import ModelService
 from models.base import ModelBase
-from models.forecasting import ProphetModel, XGBoostModel, ARIMAModel, LSTMModel
+from models.forecasting import ARIMAModel, LSTMModel, ProphetModel, XGBoostModel
 from utils import ModelError, get_logger, time_series_cross_validation
 
 logger = get_logger(__name__)

@@ -4,8 +4,8 @@ import os
 from typing import Optional
 
 import dash
-from dash import Dash, html
 import dash_bootstrap_components as dbc
+from dash import Dash, html
 
 from config import config
 from dashboard.layouts import create_layout

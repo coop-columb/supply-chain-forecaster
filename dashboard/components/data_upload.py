@@ -2,9 +2,10 @@
 
 import base64
 import io
-import pandas as pd
-from dash import dcc, html, dash_table
+
 import dash_bootstrap_components as dbc
+import pandas as pd
+from dash import dash_table, dcc, html
 
 
 def create_upload_component(id_prefix: str):

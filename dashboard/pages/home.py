@@ -1,7 +1,7 @@
 """Home page for the supply chain forecaster dashboard."""
 
-from dash import dcc, html
 import dash_bootstrap_components as dbc
+from dash import dcc, html
 
 
 def create_home_layout():

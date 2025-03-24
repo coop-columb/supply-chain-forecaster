@@ -1,9 +1,10 @@
 """Unit tests for the forecasting models."""
 
-import pytest
+from datetime import datetime, timedelta
+
 import numpy as np
 import pandas as pd
-from datetime import datetime, timedelta
+import pytest
 
 # Import models as needed
 # For the tests to work, you need to have these models implemented

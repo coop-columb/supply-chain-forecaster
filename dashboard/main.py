@@ -1,8 +1,9 @@
 """Main entry point for the supply chain forecaster dashboard."""
 
 import os
-from dash import Dash
+
 import dash_bootstrap_components as dbc
+from dash import Dash
 
 from config import config
 from dashboard.app import create_dashboard

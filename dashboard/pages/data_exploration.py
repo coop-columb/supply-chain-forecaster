@@ -1,11 +1,11 @@
 """Data exploration page for the supply chain forecaster dashboard."""
 
-from dash import dcc, html, dash_table
 import dash_bootstrap_components as dbc
 import pandas as pd
+from dash import dash_table, dcc, html
 
-from dashboard.components.data_upload import create_upload_component
 from dashboard.components.charts import create_time_series_chart
+from dashboard.components.data_upload import create_upload_component
 
 
 def create_data_exploration_layout():
@@ -119,8 +119,8 @@ def create_correlation_heatmap(df):
     corr_matrix = df[numeric_cols].corr().round(2)
     
     # Create heatmap
-    import plotly.graph_objs as go
     import plotly.express as px
+    import plotly.graph_objs as go
     
     fig = px.imshow(
         corr_matrix,

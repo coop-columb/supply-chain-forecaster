@@ -1,7 +1,7 @@
 """Model selection components for the supply chain forecaster dashboard."""
 
-from dash import dcc, html
 import dash_bootstrap_components as dbc
+from dash import dcc, html
 
 
 def create_model_selection(id_prefix, model_types=None, deployed_models=None):

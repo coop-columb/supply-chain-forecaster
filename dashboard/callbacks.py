@@ -1,25 +1,36 @@
 """Callbacks for the supply chain forecaster dashboard."""
 
-import json
 import base64
 import io
-import pandas as pd
-import numpy as np
-import requests
-from dash import Dash, dcc, html, dash_table, Input, Output, State, callback, no_update
-import dash_bootstrap_components as dbc
-import plotly.graph_objs as go
+import json
 
-from dashboard.components.data_upload import parse_contents
-from dashboard.components.model_selection import create_model_selection, create_deployed_model_selection, create_model_parameters
+import dash_bootstrap_components as dbc
+import numpy as np
+import pandas as pd
+import plotly.graph_objs as go
+import requests
+from dash import Dash, Input, Output, State, callback, dash_table, dcc, html, no_update
+
 from dashboard.components.charts import (
-    create_time_series_chart,
-    create_forecast_chart,
     create_anomaly_chart,
     create_feature_importance_chart,
+    create_forecast_chart,
+    create_time_series_chart,
 )
-from dashboard.pages.data_exploration import create_summary_stats, create_correlation_heatmap
-from dashboard.pages.model_management import create_model_list_table, create_model_details
+from dashboard.components.data_upload import parse_contents
+from dashboard.components.model_selection import (
+    create_deployed_model_selection,
+    create_model_parameters,
+    create_model_selection,
+)
+from dashboard.pages.data_exploration import (
+    create_correlation_heatmap,
+    create_summary_stats,
+)
+from dashboard.pages.model_management import (
+    create_model_details,
+    create_model_list_table,
+)
 
 
 def register_callbacks(app: Dash):
@@ -35,10 +46,10 @@ def register_callbacks(app: Dash):
         Input("url", "pathname"),
     )
     def render_page_content(pathname):
-        from dashboard.pages.home import create_home_layout
+        from dashboard.pages.anomaly_detection import create_anomaly_layout
         from dashboard.pages.data_exploration import create_data_exploration_layout
         from dashboard.pages.forecasting import create_forecasting_layout
-        from dashboard.pages.anomaly_detection import create_anomaly_layout
+        from dashboard.pages.home import create_home_layout
         from dashboard.pages.model_management import create_model_management_layout
         
         if pathname == "/":

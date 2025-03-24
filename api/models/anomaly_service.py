@@ -8,8 +8,12 @@ import numpy as np
 import pandas as pd
 
 from api.models.model_service import ModelService
+from models.anomaly import (
+    AutoencoderDetector,
+    IsolationForestDetector,
+    StatisticalDetector,
+)
 from models.base import ModelBase
-from models.anomaly import IsolationForestDetector, StatisticalDetector, AutoencoderDetector
 from utils import ModelError, get_logger
 
 logger = get_logger(__name__)
@@ -128,13 +132,13 @@ class AnomalyService:
             # Calculate classification metrics if true labels are provided
             if y_test is not None:
                 from sklearn.metrics import (
+                    accuracy_score,
+                    f1_score,
                     precision_score,
                     recall_score,
-                    f1_score,
-                    accuracy_score,
                     roc_auc_score,
                 )
-                
+
                 # Convert to binary format (0 for normal, 1 for anomaly)
                 y_true_binary = (y_test == -1).astype(int)
                 y_pred_binary = (y_pred == -1).astype(int)
