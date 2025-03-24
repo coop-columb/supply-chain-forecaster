@@ -3,7 +3,7 @@ pytest==7.4.0
 pytest-cov==4.1.0
 pytest-mock==3.11.1
 pytest-dash==2.1.2  # Latest version available
-selenium==4.11.0
+selenium==3.141.0  # Version compatible with pytest-dash
 percy==2.0.2
 dash-bootstrap-components==1.4.1
 
