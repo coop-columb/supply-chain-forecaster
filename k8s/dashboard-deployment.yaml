@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: supply-chain-dashboard
+  labels:
+    app: supply-chain-dashboard
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: supply-chain-dashboard
+  template:
+    metadata:
+      labels:
+        app: supply-chain-dashboard
+    spec:
+      containers:
+      - name: dashboard
+        image: ${DOCKER_REGISTRY}/supply-chain-forecaster-dashboard:${VERSION}
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8050
+        env:
+        - name: ENV
+          value: "production"
+        - name: API_URL
+          value: "http://supply-chain-api"
+        - name: LOG_LEVEL
+          value: "INFO"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8050
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8050
+          initialDelaySeconds: 20
+          periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: supply-chain-dashboard
+spec:
+  selector:
+    app: supply-chain-dashboard
+  ports:
+  - port: 80
+    targetPort: 8050
+  type: ClusterIP
