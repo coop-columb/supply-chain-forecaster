@@ -2,13 +2,22 @@ import requests
 import json
 import pandas as pd
 import matplotlib.pyplot as plt
+import base64
 
 class SupplyChainClient:
-    def __init__(self, base_url="http://localhost:8000", api_key=None):
+    def __init__(self, base_url="http://localhost:8000", api_key=None, username=None, password=None):
         self.base_url = base_url
         self.headers = {}
+        
+        # Set up authentication headers
         if api_key:
-            self.headers["Authorization"] = f"Bearer {api_key}"
+            # API key authentication
+            self.headers["X-API-Key"] = api_key
+        elif username and password:
+            # Basic authentication
+            auth_str = f"{username}:{password}"
+            encoded_auth = base64.b64encode(auth_str.encode()).decode()
+            self.headers["Authorization"] = f"Basic {encoded_auth}"
     
     def health_check(self):
         """Check if API is operational"""
@@ -50,18 +59,108 @@ class SupplyChainClient:
             headers=self.headers
         )
         return response.json()
+        
+    def detect_anomalies(self, data_file, detection_params):
+        """Detect anomalies in the provided data"""
+        files = {"file": open(data_file, "rb")}
+        data = {"params": json.dumps(detection_params)}
+        
+        response = requests.post(
+            f"{self.base_url}/anomalies/detect",
+            files=files,
+            data=data,
+            headers=self.headers
+        )
+        return response.json()
+        
+    # Authentication endpoints
+    def get_current_user(self):
+        """Get information about the currently authenticated user"""
+        response = requests.get(
+            f"{self.base_url}/auth/me",
+            headers=self.headers
+        )
+        return response.json()
+    
+    def create_api_key(self, name, expires_days=None, scope=None):
+        """Create a new API key (admin only)"""
+        data = {
+            "name": name,
+            "expires_days": expires_days,
+            "scope": scope
+        }
+        
+        response = requests.post(
+            f"{self.base_url}/auth/keys",
+            json=data,
+            headers=self.headers
+        )
+        return response.json()
+    
+    def list_api_keys(self):
+        """List all API keys (admin only)"""
+        response = requests.get(
+            f"{self.base_url}/auth/keys",
+            headers=self.headers
+        )
+        return response.json()
+    
+    def revoke_api_key(self, key_id):
+        """Revoke (delete) an API key (admin only)"""
+        response = requests.delete(
+            f"{self.base_url}/auth/keys/{key_id}",
+            headers=self.headers
+        )
+        return response.json()
 
 # Example usage
 if __name__ == "__main__":
+    # Example 1: No authentication
     client = SupplyChainClient()
     
     # Check if API is working
     health = client.health_check()
     print(f"API health: {health}")
     
-    # List available models
-    models = client.list_models(trained=True)
-    print(f"Available models: {models}")
+    # Example 2: Using basic authentication
+    admin_client = SupplyChainClient(
+        username="admin",
+        password="adminpassword"
+    )
+    
+    # Get authenticated user information
+    user_info = admin_client.get_current_user()
+    print(f"Authenticated as: {user_info}")
+    
+    # Create a new API key
+    try:
+        api_key_data = admin_client.create_api_key(
+            name="Production Service",
+            expires_days=90,
+            scope="read:forecasts write:forecasts"
+        )
+        print(f"Created API key: {api_key_data}")
+        
+        # Store the key securely - it's only shown once!
+        api_key = api_key_data["key"]
+        
+        # List all API keys
+        keys = admin_client.list_api_keys()
+        print(f"Available API keys: {keys}")
+    except Exception as e:
+        print(f"Authentication might not be enabled: {e}")
+    
+    # Example 3: Using API key authentication (if available)
+    try:
+        key_client = SupplyChainClient(api_key=api_key)
+        
+        # List available models
+        models = key_client.list_models(trained=True)
+        print(f"Available models: {models}")
+    except:
+        # Fall back to unauthenticated client
+        models = client.list_models(trained=True)
+        print(f"Available models: {models}")
     
     # Example forecast parameters
     forecast_params = {

@@ -15,6 +15,7 @@ http://localhost:8000
 The API is organized into the following sections:
 
 - **Health Check**: Endpoints for monitoring API health
+- **Authentication**: Endpoints for API key management and user info
 - **Models**: Endpoints for managing trained models
 - **Forecasting**: Endpoints for training forecasting models and generating predictions
 - **Predictions**: Endpoints for making predictions with trained models
@@ -240,6 +241,126 @@ Deletes a model.
 {
   "status": "success",
   "message": "Model 'ProphetModel_20230815_123456' deleted successfully"
+}
+```
+
+## Authentication Endpoints
+
+These endpoints are available when authentication is enabled in the configuration.
+
+### Authentication Methods
+
+The API supports two authentication methods:
+
+1. **HTTP Basic Authentication**: Username and password authentication
+2. **API Key Authentication**: Using API keys in the `X-API-Key` header
+
+### Get Current User Info
+
+```
+GET /auth/me
+```
+
+Returns information about the currently authenticated user.
+
+**Headers:**
+- `Authorization`: Basic authentication header
+- Or `X-API-Key`: API key
+
+**Response:**
+```json
+{
+  "username": "admin",
+  "full_name": "Administrator",
+  "email": "admin@example.com",
+  "auth_type": "basic",
+  "roles": ["admin"]
+}
+```
+
+### Create a New API Key
+
+```
+POST /auth/keys
+```
+
+Creates a new API key. Requires administrator privileges.
+
+**Headers:**
+- `Authorization`: Basic authentication header
+
+**Request:**
+```json
+{
+  "name": "My Service API Key",
+  "expires_days": 90,
+  "scope": "read:forecasts write:forecasts"
+}
+```
+
+**Response:**
+```json
+{
+  "key": "a1b2c3d4e5f6...",
+  "name": "My Service API Key",
+  "created_at": 1679012345,
+  "expires_at": 1687012345,
+  "scope": "read:forecasts write:forecasts"
+}
+```
+
+### List API Keys
+
+```
+GET /auth/keys
+```
+
+Lists all API keys without showing the full key values. Requires administrator privileges.
+
+**Headers:**
+- `Authorization`: Basic authentication header
+
+**Response:**
+```json
+[
+  {
+    "id": "a1b2c3d4...",
+    "name": "My Service API Key",
+    "created_at": 1679012345,
+    "expires_at": 1687012345,
+    "last_used": 1680012345,
+    "scope": "read:forecasts write:forecasts"
+  },
+  {
+    "id": "e5f6g7h8...",
+    "name": "Monitoring Key",
+    "created_at": 1678012345,
+    "expires_at": null,
+    "last_used": 1680011111,
+    "scope": "read:health"
+  }
+]
+```
+
+### Revoke an API Key
+
+```
+DELETE /auth/keys/{key_id}
+```
+
+Revokes (deletes) an API key. Requires administrator privileges.
+
+**Headers:**
+- `Authorization`: Basic authentication header
+
+**Parameters:**
+- `key_id`: ID (prefix) of the API key to revoke
+
+**Response:**
+```json
+{
+  "status": "success",
+  "message": "API key a1b2c3d4... revoked"
 }
 ```
 
@@ -532,6 +653,36 @@ The API returns standard HTTP status codes and JSON error responses.
 ## API Usage Examples
 
 Here are some examples of how to use the API with curl:
+
+### Authentication Examples
+
+#### Basic Authentication
+
+```bash
+# Get user information with basic auth
+curl -X GET "http://localhost:8000/auth/me" \
+  -u "admin:adminpassword"
+
+# Create a new API key
+curl -X POST "http://localhost:8000/auth/keys" \
+  -u "admin:adminpassword" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Production Service Key","expires_days":90,"scope":"read:* write:forecasts"}'
+```
+
+#### API Key Authentication
+
+```bash
+# Get user information with API key
+curl -X GET "http://localhost:8000/auth/me" \
+  -H "X-API-Key: your-api-key-here"
+
+# Using API key for forecast generation
+curl -X POST "http://localhost:8000/forecasting/forecast" \
+  -H "X-API-Key: your-api-key-here" \
+  -F "file=@future_data.csv" \
+  -F "params={\"model_name\":\"DemandForecast\",\"model_type\":\"ProphetModel\",\"feature_columns\":[\"date\",\"temperature\",\"promotion\"],\"date_column\":\"date\",\"steps\":30,\"return_conf_int\":true}"
+```
 
 ### Training a Prophet Model
 
