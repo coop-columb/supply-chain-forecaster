@@ -18,10 +18,12 @@ xgboost==1.7.6
 tensorflow==2.12.0
 
 # API
-# Downgraded FastAPI and pydantic for compatibility
+# Pin versions explicitly for compatibility
 fastapi==0.95.2
 uvicorn==0.23.2
 pydantic==1.10.8
+starlette==0.27.0
+httpx==0.24.1
 python-multipart==0.0.7  # Required for FastAPI file uploads and form data
 
 # Utilities
