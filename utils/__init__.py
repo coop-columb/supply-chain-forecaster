@@ -17,6 +17,13 @@ from utils.error_handling import (
     safe_decorator,
     safe_execute,
 )
+from utils.evaluation import (
+    calculate_metrics,
+    create_feature_importance_plot,
+    plot_forecast_components,
+    plot_forecast_vs_actual,
+    time_series_cross_validation,
+)
 from utils.logging import get_logger, setup_logger
 
 __all__ = [
@@ -35,4 +42,9 @@ __all__ = [
     "create_lag_features",
     "create_rolling_features",
     "add_holiday_features",
+    "calculate_metrics",
+    "time_series_cross_validation",
+    "plot_forecast_vs_actual",
+    "plot_forecast_components",
+    "create_feature_importance_plot",
 ]
