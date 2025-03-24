@@ -69,6 +69,13 @@ class BaseConfig:
     # Logging configuration
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
     LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    
+    # Security configuration
+    ENABLE_AUTH = os.getenv("ENABLE_AUTH", "False").lower() == "true"
+    SECRET_KEY = os.getenv("SECRET_KEY", None)
+    API_KEYS_FILE = os.getenv("API_KEYS_FILE", str(PROJECT_ROOT / "api_keys.json"))
+    TOKEN_EXPIRE_MINUTES = int(os.getenv("TOKEN_EXPIRE_MINUTES", "60"))
+    ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
 
     def as_dict(self) -> Dict[str, Union[str, int, bool, List[int]]]:
         """Return configuration as a dictionary."""

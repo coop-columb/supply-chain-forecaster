@@ -3,11 +3,13 @@
 from typing import Dict, List, Optional, Union
 
 import pandas as pd
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Security, UploadFile, status
 from pydantic import BaseModel, Field
 
+from api.models.auth_service import get_current_user, get_optional_user
 from api.models.forecasting_service import ForecastingService
 from api.models.model_service import ModelService
+from config import config
 from utils import ApplicationError, ModelError, get_logger
 
 logger = get_logger(__name__)
@@ -92,6 +94,7 @@ async def train_model(
     params: TrainingParams,
     file: UploadFile = File(...),
     forecasting_service: ForecastingService = Depends(get_forecasting_service),
+    current_user: Dict = Security(get_current_user) if config.ENABLE_AUTH else None,
 ):
     """
     Train a forecasting model on the provided data.
@@ -161,6 +164,7 @@ async def generate_forecast(
     params: ForecastParams,
     file: UploadFile = File(...),
     forecasting_service: ForecastingService = Depends(get_forecasting_service),
+    current_user: Dict = Security(get_current_user) if config.ENABLE_AUTH else None,
 ):
     """
     Generate a forecast using a trained model.
@@ -244,6 +248,7 @@ async def cross_validate(
     params: CrossValidationParams,
     file: UploadFile = File(...),
     forecasting_service: ForecastingService = Depends(get_forecasting_service),
+    current_user: Dict = Security(get_current_user) if config.ENABLE_AUTH else None,
 ):
     """
     Perform time series cross-validation on a model.

@@ -11,7 +11,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from api.routes import anomaly, forecasting, health, model, prediction
+from api.models.auth_service import auth_service
+from api.routes import anomaly, auth, forecasting, health, model, prediction
 from config import config
 from utils import (
     ApplicationError,
@@ -104,14 +105,19 @@ def create_app() -> FastAPI:
     # Add request tracing middleware
     app.add_middleware(RequestTracingMiddleware)
     
-    # Add CORS middleware
+    # Add CORS middleware with configured settings
     allowed_origins = getattr(config, "ALLOWED_ORIGINS", ["*"])
+    allow_credentials = getattr(config, "CORS_ALLOW_CREDENTIALS", True)
+    allow_methods = getattr(config, "CORS_ALLOW_METHODS", ["*"])
+    allow_headers = getattr(config, "CORS_ALLOW_HEADERS", ["*"])
+    
     app.add_middleware(
         CORSMiddleware,
         allow_origins=allowed_origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_credentials=allow_credentials,
+        allow_methods=allow_methods,
+        allow_headers=allow_headers,
+        expose_headers=["X-Request-ID", "X-Process-Time-ms"],
     )
     
     # Add rate limiting if enabled
@@ -148,6 +154,7 @@ def create_app() -> FastAPI:
     
     # Include routers
     app.include_router(health.router, tags=["health"])
+    app.include_router(auth.router, prefix="/auth", tags=["auth"])
     app.include_router(model.router, prefix="/models", tags=["models"])
     app.include_router(forecasting.router, prefix="/forecasting", tags=["forecasting"])
     app.include_router(prediction.router, prefix="/predictions", tags=["predictions"])
@@ -156,10 +163,22 @@ def create_app() -> FastAPI:
     # Log application startup
     @app.on_event("startup")
     async def startup_event():
+        # Initialize the auth service with config
+        if hasattr(config, "SECRET_KEY") and config.SECRET_KEY:
+            auth_service.secret_key = config.SECRET_KEY
+        if hasattr(config, "API_KEYS_FILE") and config.API_KEYS_FILE:
+            auth_service.api_keys_file = config.API_KEYS_FILE
+        if hasattr(config, "TOKEN_EXPIRE_MINUTES"):
+            auth_service.token_expire_minutes = config.TOKEN_EXPIRE_MINUTES
+        
+        # Reload API keys
+        auth_service.api_keys = auth_service._load_api_keys()
+        
         logger.info(
             f"Starting Supply Chain Forecaster API (version: {app.version})",
             version=app.version,
             environment=os.getenv("ENV", "development"),
+            auth_enabled=getattr(config, "ENABLE_AUTH", False),
         )
     
     # Log application shutdown

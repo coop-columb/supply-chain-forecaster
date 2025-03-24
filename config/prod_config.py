@@ -55,3 +55,12 @@ class ProdConfig(BaseConfig):
     FEATURE_FLAG_ANOMALY_DETECTION = True
     FEATURE_FLAG_INTERACTIVE_VISUALIZATIONS = True
     FEATURE_FLAG_SCENARIO_PLANNING = False  # Not ready for production yet
+    
+    # Security settings for production
+    ENABLE_AUTH = True
+    ALLOWED_ORIGINS = ["https://app.example.com", "https://api.example.com"]
+    CORS_ALLOW_CREDENTIALS = True
+    SECURE_COOKIES = True
+    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Lax"
