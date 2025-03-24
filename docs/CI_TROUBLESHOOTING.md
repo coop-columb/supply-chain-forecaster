@@ -257,6 +257,20 @@ This automatically fixed import sorting issues in 23 files:
 - Model implementation files (anomaly/*.py, evaluation/*.py, forecasting/*.py)
 - Test files (conftest.py, test_*.py)
 
+### 8. Fixed Testing Dependencies Issues (March 2025)
+
+Added and fixed testing dependencies in requirements-dev.txt:
+
+1. **pytest-dash version issue**:
+   - Initially specified pytest-dash==2.2.0, but this version doesn't exist
+   - Fixed by using pytest-dash==2.1.2 (latest available version)
+
+2. **Selenium compatibility issue**:
+   - Initially using selenium==4.11.0, which caused failures with pytest-dash
+   - Error: `AttributeError: module 'selenium.webdriver' has no attribute 'Opera'`
+   - Root cause: Newer selenium versions (4.x+) removed the Opera webdriver
+   - Fixed by downgrading to selenium==3.141.0, which still has Opera driver support
+
 #### Troubleshooting Process
 
 The process followed to diagnose and fix these issues:
@@ -275,12 +289,16 @@ The process followed to diagnose and fix these issues:
    - Second fix: Added black and isort modifications to continue on errors (3/24/2025)
    - Third fix: Pinned starlette and httpx versions to resolve TestClient compatibility issues (3/24/2025)
    - Fourth fix: Fixed import sorting issues across the codebase (3/24/2025)
+   - Fifth fix: Added correct pytest-dash version to requirements-dev.txt (3/24/2025)
+   - Sixth fix: Downgraded selenium for compatibility with pytest-dash (3/24/2025)
    - Each fix was properly documented with the exact changes made
 
 4. Final verification:
    - Confirmed all CI checks now complete successfully
    - Import sorting issues resolved
    - TestClient now works correctly in CI environment
+   - Testing dependencies resolve correctly without compatibility issues
+   - All integration and unit tests run in CI without failures
    - Documented all fixes for future reference
 
 ## Future Work
