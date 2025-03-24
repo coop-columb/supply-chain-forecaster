@@ -91,7 +91,13 @@ For production Kubernetes deployment, see the [Kubernetes Deployment Guide](k8s/
 
 ## Usage
 
-Usage examples are available in the [Usage Guide](docs/usage.md).
+Comprehensive documentation is available to help you get started:
+
+- [Quick Start Guide](docs/usage/quickstart.md) - Get up and running quickly
+- [User Documentation](docs/usage/index.md) - Complete user documentation
+- [Dashboard Walkthrough](docs/usage/dashboard_walkthrough.md) - Guide to using the dashboard
+- [API Examples](docs/usage/api_examples.md) - Examples of using the API programmatically
+- [Troubleshooting](docs/usage/troubleshooting.md) - Solutions for common issues
 
 ## Contributing
 

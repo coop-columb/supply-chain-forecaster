@@ -4,11 +4,17 @@ This directory contains comprehensive documentation for the supply chain forecas
 
 ## Table of Contents
 
+- [User Documentation](usage/index.md)
+  - [Quick Start Guide](usage/quickstart.md)
+  - [Dashboard Walkthrough](usage/dashboard_walkthrough.md)
+  - [Common Workflows](usage/common_workflows.md)
+  - [API Examples](usage/api_examples.md)
+  - [Troubleshooting Guide](usage/troubleshooting.md)
 - [Installation Guide](installation/installation.md)
-- [Usage Guide](usage/usage.md)
 - [API Documentation](api/api.md)
 - [Model Documentation](models/models.md)
 - [Deployment Documentation](deployment/docker_production.md)
+- [Monitoring Documentation](deployment/monitoring.md)
 - [CI Troubleshooting](CI_TROUBLESHOOTING.md)
 
 ## Overview
@@ -22,6 +28,7 @@ The Supply Chain Forecaster is a production-grade system for forecasting supply 
 - Anomaly detection for supply chain disruptions
 - Interactive dashboards for visualization
 - API for integration with existing systems
+- Comprehensive monitoring and observability
 - Automated CI/CD pipeline
 - Containerized deployment
 
@@ -33,6 +40,7 @@ supply-chain-forecaster/
 ├── data/              # Data handling module
 ├── models/            # Models module
 ├── utils/             # Utilities module
+├── monitoring/        # Monitoring configuration
 ├── docs/              # Documentation
 ├── tests/             # Tests
 ├── .github/           # GitHub CI/CD workflows
@@ -43,8 +51,16 @@ supply-chain-forecaster/
 
 ## Getting Started
 
-Refer to the [Installation Guide](installation/installation.md) and [Usage Guide](usage/usage.md) for detailed instructions on how to set up and use the system.
+Refer to the [Quick Start Guide](usage/quickstart.md) and [User Documentation](usage/index.md) for detailed instructions on how to use the system.
+
+## Installation
+
+See the [Installation Guide](installation/installation.md) for detailed setup instructions.
 
 ## Deployment
 
 For production deployment information, see the [Docker Production Guide](deployment/docker_production.md) and [Kubernetes Deployment Guide](../k8s/README.md).
+
+## Monitoring
+
+For information about monitoring and observability, see the [Monitoring Guide](deployment/monitoring.md).
