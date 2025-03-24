@@ -22,6 +22,7 @@ tensorflow==2.12.0
 fastapi==0.95.2
 uvicorn==0.23.2
 pydantic==1.10.8
+python-multipart==0.0.7  # Required for FastAPI file uploads and form data
 
 # Utilities
 python-dotenv==1.0.0

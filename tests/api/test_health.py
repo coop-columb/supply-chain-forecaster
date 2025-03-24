@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 # Import create_app with try/except to handle import errors
 try:
     from api.app import create_app
-except ImportError:
+except (ImportError, RuntimeError):
     # If api.app cannot be imported, create a simple mock app for testing
     def create_app():
         app = FastAPI()

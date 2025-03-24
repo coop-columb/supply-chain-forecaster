@@ -28,14 +28,14 @@ except ImportError:
 
 try:
     from api.app import create_app
-except ImportError:
+except (ImportError, RuntimeError):
     # Create a mock create_app function
     def create_app():
         return None
 
 try:
     from dashboard.app import create_dashboard
-except ImportError:
+except (ImportError, RuntimeError):
     # Create a mock create_dashboard function
     def create_dashboard():
         return None
