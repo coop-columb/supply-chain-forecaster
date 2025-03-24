@@ -9,6 +9,13 @@ from prometheus_client import Counter, Gauge, Histogram, Summary, start_http_ser
 from config import config
 from utils.logging import get_logger, get_request_id
 
+# Import profiling utilities if available
+try:
+    from utils.profiling import profile_time, profile_memory
+    PROFILING_ENABLED = True
+except ImportError:
+    PROFILING_ENABLED = False
+
 logger = get_logger(__name__)
 
 # Define Prometheus metrics
@@ -71,33 +78,68 @@ def track_request_duration(func: Callable) -> Callable:
         endpoint = func.__name__
         
         start_time = time.time()
-        try:
-            response = await func(*args, **kwargs)
-            duration = time.time() - start_time
-            status = response.status_code
-            
-            # Record metrics
-            http_requests_total.labels(method=method, endpoint=endpoint, status=status).inc()
-            request_duration_seconds.labels(method=method, endpoint=endpoint).observe(duration)
-            
-            # Log request if enabled
-            if config.COLLECT_API_METRICS:
-                from utils.logging import log_request
-                request_id = get_request_id()
-                log_request(
-                    request_id=request_id,
-                    method=method,
-                    url=kwargs.get('request').url.path if 'request' in kwargs else endpoint,
-                    status_code=status,
-                    duration_ms=duration * 1000
-                )
+        
+        # Use profiling if enabled
+        if PROFILING_ENABLED and config.ENABLE_PROFILING:
+            endpoint_name = f"{method}_{endpoint}"
+            try:
+                # Use profile_time and profile_memory together
+                with profile_time(endpoint_name, "api"), profile_memory(endpoint_name, "api"):
+                    response = await func(*args, **kwargs)
+                    duration = time.time() - start_time
+                    status = response.status_code
                 
-            return response
-        except Exception as e:
-            errors_total.labels(error_type=type(e).__name__).inc()
-            raise
-        finally:
-            active_requests.dec()
+                # Record metrics
+                http_requests_total.labels(method=method, endpoint=endpoint, status=status).inc()
+                request_duration_seconds.labels(method=method, endpoint=endpoint).observe(duration)
+                
+                # Log request if enabled
+                if config.COLLECT_API_METRICS:
+                    from utils.logging import log_request
+                    request_id = get_request_id()
+                    log_request(
+                        request_id=request_id,
+                        method=method,
+                        url=kwargs.get('request').url.path if 'request' in kwargs else endpoint,
+                        status_code=status,
+                        duration_ms=duration * 1000
+                    )
+                
+                return response
+            except Exception as e:
+                errors_total.labels(error_type=type(e).__name__).inc()
+                raise
+            finally:
+                active_requests.dec()
+        else:
+            # Original implementation without profiling
+            try:
+                response = await func(*args, **kwargs)
+                duration = time.time() - start_time
+                status = response.status_code
+                
+                # Record metrics
+                http_requests_total.labels(method=method, endpoint=endpoint, status=status).inc()
+                request_duration_seconds.labels(method=method, endpoint=endpoint).observe(duration)
+                
+                # Log request if enabled
+                if config.COLLECT_API_METRICS:
+                    from utils.logging import log_request
+                    request_id = get_request_id()
+                    log_request(
+                        request_id=request_id,
+                        method=method,
+                        url=kwargs.get('request').url.path if 'request' in kwargs else endpoint,
+                        status_code=status,
+                        duration_ms=duration * 1000
+                    )
+                    
+                return response
+            except Exception as e:
+                errors_total.labels(error_type=type(e).__name__).inc()
+                raise
+            finally:
+                active_requests.dec()
     
     return wrapper
 
@@ -115,44 +157,85 @@ def track_model_prediction(func: Callable) -> Callable:
     @wraps(func)
     def wrapper(*args, **kwargs):
         model_name = args[0].__class__.__name__ if args else 'unknown_model'
+        if hasattr(args[0], 'name'):
+            model_name = args[0].name
         
-        start_time = time.time()
-        try:
-            result = func(*args, **kwargs)
-            duration = time.time() - start_time
-            
-            # Record metrics
-            model_prediction_count.labels(model_name=model_name, status='success').inc()
-            prediction_duration_seconds.labels(model_name=model_name).observe(duration)
-            model_latency_seconds.labels(model_name=model_name).observe(duration)
-            
-            # Log model prediction if enabled
-            if config.COLLECT_PREDICTION_METRICS:
-                from utils.logging import log_model_prediction
+        # Use profiling if enabled
+        if PROFILING_ENABLED and config.ENABLE_PROFILING:
+            # For better profiling categorization, include the method name
+            operation_name = f"{func.__name__}_{model_name}"
+            try:
+                with profile_time(operation_name, "model"), profile_memory(operation_name, "model"):
+                    start_time = time.time()
+                    result = func(*args, **kwargs)
+                    duration = time.time() - start_time
                 
-                if hasattr(args[0], 'input_shape') and hasattr(args[0], 'output_shape'):
-                    input_shape = args[0].input_shape
-                    output_shape = args[0].output_shape
-                else:
-                    # Try to determine shapes from inputs and outputs
-                    input_shape = tuple([len(arg) for arg in args[1:] if hasattr(arg, '__len__')])
-                    output_shape = result.shape if hasattr(result, 'shape') else (1,)
+                # Record metrics
+                model_prediction_count.labels(model_name=model_name, status='success').inc()
+                prediction_duration_seconds.labels(model_name=model_name).observe(duration)
+                model_latency_seconds.labels(model_name=model_name).observe(duration)
                 
-                log_model_prediction(
-                    model_name=model_name,
-                    input_shape=input_shape,
-                    output_shape=output_shape,
-                    duration_ms=duration * 1000,
-                    request_id=get_request_id()
-                )
+                # Log model prediction details if enabled
+                if config.COLLECT_PREDICTION_METRICS:
+                    _log_model_prediction_details(args, result, model_name, duration)
                 
-            return result
-        except Exception as e:
-            model_prediction_count.labels(model_name=model_name, status='error').inc()
-            errors_total.labels(error_type=type(e).__name__).inc()
-            raise
+                return result
+            except Exception as e:
+                model_prediction_count.labels(model_name=model_name, status='error').inc()
+                errors_total.labels(error_type=type(e).__name__).inc()
+                raise
+        else:
+            # Original implementation without profiling
+            start_time = time.time()
+            try:
+                result = func(*args, **kwargs)
+                duration = time.time() - start_time
+                
+                # Record metrics
+                model_prediction_count.labels(model_name=model_name, status='success').inc()
+                prediction_duration_seconds.labels(model_name=model_name).observe(duration)
+                model_latency_seconds.labels(model_name=model_name).observe(duration)
+                
+                # Log model prediction details if enabled
+                if config.COLLECT_PREDICTION_METRICS:
+                    _log_model_prediction_details(args, result, model_name, duration)
+                
+                return result
+            except Exception as e:
+                model_prediction_count.labels(model_name=model_name, status='error').inc()
+                errors_total.labels(error_type=type(e).__name__).inc()
+                raise
     
     return wrapper
+
+
+def _log_model_prediction_details(args, result, model_name, duration):
+    """
+    Log details about a model prediction.
+    
+    Args:
+        args: Function arguments
+        result: Function result
+        model_name: Name of the model
+        duration: Duration of the prediction
+    """
+    from utils.logging import log_model_prediction
+    
+    if hasattr(args[0], 'input_shape') and hasattr(args[0], 'output_shape'):
+        input_shape = args[0].input_shape
+        output_shape = args[0].output_shape
+    else:
+        # Try to determine shapes from inputs and outputs
+        input_shape = tuple([len(arg) for arg in args[1:] if hasattr(arg, '__len__')])
+        output_shape = result.shape if hasattr(result, 'shape') else (1,)
+    
+    log_model_prediction(
+        model_name=model_name,
+        input_shape=input_shape,
+        output_shape=output_shape,
+        duration_ms=duration * 1000,
+        request_id=get_request_id()
+    )
 
 
 def update_resource_metrics() -> None:
@@ -199,31 +282,63 @@ class PrometheusMiddleware:
         active_requests.inc()
         start_time = time.time()
         
-        # Modified send function to capture status code
-        original_send = send
-        
-        async def send_with_metrics(message):
-            if message["type"] == "http.response.start":
-                status_code = message["status"]
-                duration = time.time() - start_time
+        # Use profiling context managers if enabled
+        if PROFILING_ENABLED and hasattr(config, "ENABLE_PROFILING") and config.ENABLE_PROFILING:
+            # Create a more specific name for the endpoint
+            endpoint_name = f"{method}_{path.replace('/', '_')}"
+            with profile_time(endpoint_name, "api"):
+                # Modified send function to capture status code
+                original_send = send
                 
-                # Record metrics
-                http_requests_total.labels(method=method, endpoint=path, status=status_code).inc()
-                request_duration_seconds.labels(method=method, endpoint=path).observe(duration)
+                async def send_with_metrics(message):
+                    if message["type"] == "http.response.start":
+                        status_code = message["status"]
+                        duration = time.time() - start_time
+                        
+                        # Record metrics
+                        http_requests_total.labels(method=method, endpoint=path, status=status_code).inc()
+                        request_duration_seconds.labels(method=method, endpoint=path).observe(duration)
+                        
+                        # Update resource metrics periodically
+                        if config.COLLECT_API_METRICS:
+                            update_resource_metrics()
+                        
+                    return await original_send(message)
                 
-                # Update resource metrics periodically
-                if config.COLLECT_API_METRICS:
-                    update_resource_metrics()
-                
-            return await original_send(message)
-        
-        try:
-            return await self.app(scope, receive, send_with_metrics)
-        except Exception as e:
-            errors_total.labels(error_type=type(e).__name__).inc()
-            raise
-        finally:
-            active_requests.dec()
+                try:
+                    return await self.app(scope, receive, send_with_metrics)
+                except Exception as e:
+                    errors_total.labels(error_type=type(e).__name__).inc()
+                    raise
+                finally:
+                    active_requests.dec()
+        else:
+            # Original implementation without profiling
+            # Modified send function to capture status code
+            original_send = send
+            
+            async def send_with_metrics(message):
+                if message["type"] == "http.response.start":
+                    status_code = message["status"]
+                    duration = time.time() - start_time
+                    
+                    # Record metrics
+                    http_requests_total.labels(method=method, endpoint=path, status=status_code).inc()
+                    request_duration_seconds.labels(method=method, endpoint=path).observe(duration)
+                    
+                    # Update resource metrics periodically
+                    if config.COLLECT_API_METRICS:
+                        update_resource_metrics()
+                    
+                return await original_send(message)
+            
+            try:
+                return await self.app(scope, receive, send_with_metrics)
+            except Exception as e:
+                errors_total.labels(error_type=type(e).__name__).inc()
+                raise
+            finally:
+                active_requests.dec()
 
 
 def create_monitoring_endpoints(app):
@@ -251,6 +366,30 @@ def create_monitoring_endpoints(app):
     async def liveness_check():
         """Check if the application is alive and functioning."""
         return {"status": "alive", "timestamp": time.time()}
+    
+    # Add profiling endpoints if profiling is enabled
+    if PROFILING_ENABLED:
+        from utils.profiling import get_profiling_stats, reset_profiling_stats
+        
+        @app.get("/profiling/stats")
+        async def profiling_stats():
+            """Get current profiling statistics."""
+            stats = get_profiling_stats()
+            return {
+                "status": "success",
+                "stats": stats,
+                "timestamp": time.time()
+            }
+        
+        @app.post("/profiling/reset")
+        async def reset_profiling():
+            """Reset profiling statistics."""
+            reset_profiling_stats()
+            return {
+                "status": "success",
+                "message": "Profiling statistics reset",
+                "timestamp": time.time()
+            }
     
     if config.PROMETHEUS_METRICS:
         @app.get(config.METRICS_ENDPOINT)

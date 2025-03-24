@@ -76,6 +76,10 @@ class BaseConfig:
     API_KEYS_FILE = os.getenv("API_KEYS_FILE", str(PROJECT_ROOT / "api_keys.json"))
     TOKEN_EXPIRE_MINUTES = int(os.getenv("TOKEN_EXPIRE_MINUTES", "60"))
     ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+    
+    # Performance profiling configuration
+    ENABLE_PROFILING = os.getenv("ENABLE_PROFILING", "False").lower() == "true"
+    PROFILING_SAMPLE_RATE = float(os.getenv("PROFILING_SAMPLE_RATE", "0.1"))  # Sample 10% of requests by default
 
     def as_dict(self) -> Dict[str, Union[str, int, bool, List[int]]]:
         """Return configuration as a dictionary."""

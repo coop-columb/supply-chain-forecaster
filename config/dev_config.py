@@ -25,3 +25,7 @@ class DevConfig(BaseConfig):
     USE_SYNTHETIC_DATA = True
     SKIP_HEAVY_PREPROCESSING = True
     QUICK_TRAIN_ITERATIONS = 10
+    
+    # Performance profiling - enabled in development for easier testing
+    ENABLE_PROFILING = True
+    PROFILING_SAMPLE_RATE = 0.2  # Profile 20% of requests in development

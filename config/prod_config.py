@@ -64,3 +64,8 @@ class ProdConfig(BaseConfig):
     SESSION_COOKIE_SECURE = True
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
+    
+    # Performance profiling - disabled by default in production
+    # Enable only temporarily for debugging specific performance issues
+    ENABLE_PROFILING = False
+    PROFILING_SAMPLE_RATE = 0.01  # Only profile 1% of requests if enabled

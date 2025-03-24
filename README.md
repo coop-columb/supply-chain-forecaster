@@ -63,8 +63,35 @@ The project includes a comprehensive monitoring and observability stack:
 - Prometheus metrics for API and model performance
 - Grafana dashboards for visualization
 - Health check endpoints for Kubernetes
+- Performance profiling for application optimization
 
 For more details, see the [Monitoring and Observability Guide](docs/deployment/monitoring.md).
+
+### Performance Profiling
+
+The system includes built-in performance profiling tools to identify bottlenecks:
+
+```bash
+# Run the API with profiling enabled
+./scripts/run_with_profiling.sh
+
+# Run the profiling analysis script
+python scripts/profile_application.py
+
+# Analyze profiling results
+python scripts/analyze_profiling.py
+```
+
+Profiling helps identify:
+- Slow API endpoints
+- Inefficient model training or inference
+- Dashboard loading bottlenecks
+- Memory usage patterns
+
+Access profiling data directly via the API endpoint:
+```
+http://localhost:8000/profiling/stats
+```
 
 ## Deployment
 
@@ -97,6 +124,7 @@ Comprehensive documentation is available to help you get started:
 - [User Documentation](docs/usage/index.md) - Complete user documentation
 - [Dashboard Walkthrough](docs/usage/dashboard_walkthrough.md) - Guide to using the dashboard
 - [API Examples](docs/usage/api_examples.md) - Examples of using the API programmatically
+- [Performance Optimization](docs/performance_optimization.md) - Guide to optimizing system performance
 - [Troubleshooting](docs/usage/troubleshooting.md) - Solutions for common issues
 
 ## Contributing
