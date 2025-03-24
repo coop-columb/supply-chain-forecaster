@@ -8,6 +8,8 @@ This directory contains comprehensive documentation for the supply chain forecas
 - [Usage Guide](usage/usage.md)
 - [API Documentation](api/api.md)
 - [Model Documentation](models/models.md)
+- [Deployment Documentation](deployment/docker_production.md)
+- [CI Troubleshooting](CI_TROUBLESHOOTING.md)
 
 ## Overview
 
@@ -42,3 +44,7 @@ supply-chain-forecaster/
 ## Getting Started
 
 Refer to the [Installation Guide](installation/installation.md) and [Usage Guide](usage/usage.md) for detailed instructions on how to set up and use the system.
+
+## Deployment
+
+For production deployment information, see the [Docker Production Guide](deployment/docker_production.md) and [Kubernetes Deployment Guide](../k8s/README.md).

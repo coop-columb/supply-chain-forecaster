@@ -1,35 +1,62 @@
 version: '3.8'
 
+# Define reusable configurations
+x-common-variables: &common-variables
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
+x-common-prod-variables: &common-prod-variables
+  <<: *common-variables
+  ENV: production
+  
+x-common-dev-variables: &common-dev-variables
+  <<: *common-variables
+  ENV: development
+
 services:
+  # Development services
   api:
     build:
       context: .
       target: development
     ports:
-      - "8000:8000"
+      - "${API_PORT:-8000}:8000"
     volumes:
       - .:/app
+      - model_data:/app/data/models
     env_file:
       - .env
     environment:
-      - ENV=development
+      <<: *common-dev-variables
     command: uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   dashboard:
     build:
       context: .
       target: development
     ports:
-      - "8050:8050"
+      - "${DASHBOARD_PORT:-8050}:8050"
     volumes:
       - .:/app
     env_file:
       - .env
     environment:
-      - ENV=development
+      <<: *common-dev-variables
+      API_URL: ${API_URL:-http://api:8000}
     command: python -m dashboard.app
     depends_on:
       - api
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8050/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   tests:
     build:
@@ -38,6 +65,71 @@ services:
     volumes:
       - .:/app
     command: pytest tests/ --cov=./ --cov-report=xml
+    depends_on:
+      - api
+      - dashboard
+
+  # Production services
+  api-prod:
+    build:
+      context: .
+      target: api-production
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - model_data:/app/data/models
+      - logs:/app/logs
+    env_file:
+      - .env.prod
+    environment:
+      <<: *common-prod-variables
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  dashboard-prod:
+    build:
+      context: .
+      target: dashboard-production
+    ports:
+      - "${DASHBOARD_PORT:-8050}:8050"
+    volumes:
+      - logs:/app/logs
+    env_file:
+      - .env.prod
+    environment:
+      <<: *common-prod-variables
+      API_URL: ${API_URL:-http://api-prod:8000}
+    depends_on:
+      - api-prod
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8050/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
 volumes:
   model_data:
+    driver: local
+  logs:
+    driver: local
