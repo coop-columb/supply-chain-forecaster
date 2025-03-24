@@ -1,0 +1,148 @@
+"""Data exploration page for the supply chain forecaster dashboard."""
+
+from dash import dcc, html, dash_table
+import dash_bootstrap_components as dbc
+import pandas as pd
+
+from dashboard.components.data_upload import create_upload_component
+from dashboard.components.charts import create_time_series_chart
+
+
+def create_data_exploration_layout():
+    """
+    Create the data exploration page layout.
+    
+    Returns:
+        Data exploration page layout.
+    """
+    return html.Div([
+        dbc.Row([
+            dbc.Col([
+                html.H1("Data Exploration", className="mb-4"),
+                html.P(
+                    "Upload and explore your supply chain data. Visualize historical trends "
+                    "and analyze key metrics to better understand your data.",
+                    className="lead mb-4",
+                ),
+            ], width=12),
+        ]),
+        
+        dbc.Row([
+            dbc.Col([
+                create_upload_component("exploration"),
+            ], width=12),
+        ], className="mb-4"),
+        
+        dbc.Row([
+            dbc.Col([
+                html.Div(id="exploration-summary-stats"),
+            ], width=12),
+        ], className="mb-4"),
+        
+        dbc.Row([
+            dbc.Col([
+                html.Div(id="exploration-time-series-container"),
+            ], width=12),
+        ], className="mb-4"),
+        
+        dbc.Row([
+            dbc.Col([
+                html.Div(id="exploration-correlation-container"),
+            ], width=12),
+        ]),
+    ])
+
+
+def create_summary_stats(df):
+    """
+    Create summary statistics for the dataframe.
+    
+    Args:
+        df: DataFrame to summarize.
+    
+    Returns:
+        Summary statistics component.
+    """
+    if df is None or df.empty:
+        return html.Div()
+    
+    # Get numeric columns
+    numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+    
+    if not numeric_cols:
+        return html.Div("No numeric columns found in the data.")
+    
+    # Calculate summary statistics
+    summary = df[numeric_cols].describe().round(2).reset_index()
+    
+    return dbc.Card([
+        dbc.CardHeader(html.H5("Summary Statistics")),
+        dbc.CardBody([
+            dash_table.DataTable(
+                data=summary.to_dict('records'),
+                columns=[{'name': str(i), 'id': str(i)} for i in summary.columns],
+                style_table={'overflowX': 'auto'},
+                style_cell={
+                    'minWidth': '100px', 'width': '150px', 'maxWidth': '200px',
+                    'overflow': 'hidden',
+                    'textOverflow': 'ellipsis',
+                },
+                style_header={
+                    'backgroundColor': 'rgb(230, 230, 230)',
+                    'fontWeight': 'bold'
+                },
+            ),
+        ]),
+    ])
+
+
+def create_correlation_heatmap(df):
+    """
+    Create correlation heatmap for numeric columns.
+    
+    Args:
+        df: DataFrame to analyze.
+    
+    Returns:
+        Correlation heatmap component.
+    """
+    if df is None or df.empty:
+        return html.Div()
+    
+    # Get numeric columns
+    numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+    
+    if len(numeric_cols) < 2:
+        return html.Div("At least two numeric columns are required for correlation analysis.")
+    
+    # Calculate correlation matrix
+    corr_matrix = df[numeric_cols].corr().round(2)
+    
+    # Create heatmap
+    import plotly.graph_objs as go
+    import plotly.express as px
+    
+    fig = px.imshow(
+        corr_matrix,
+        x=corr_matrix.columns,
+        y=corr_matrix.columns,
+        color_continuous_scale=px.colors.diverging.RdBu_r,
+        zmin=-1, zmax=1,
+    )
+    
+    fig.update_layout(
+        title="Correlation Matrix",
+        xaxis_title="",
+        yaxis_title="",
+        margin=dict(l=40, r=40, t=60, b=40),
+    )
+    
+    return dbc.Card([
+        dbc.CardHeader(html.H5("Correlation Analysis")),
+        dbc.CardBody([
+            dcc.Graph(
+                figure=fig,
+                config={'displayModeBar': True, 'responsive': True},
+            ),
+        ]),
+    ])
