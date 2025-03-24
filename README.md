@@ -11,6 +11,7 @@ A production-grade supply chain forecasting system with advanced ML models.
 - API for integration with existing systems
 - Automated CI/CD pipeline
 - Containerized deployment
+- Comprehensive monitoring and observability
 
 ## Tech Stack
 
@@ -22,6 +23,7 @@ A production-grade supply chain forecasting system with advanced ML models.
 - Docker for containerization
 - GitHub Actions for CI/CD
 - Kubernetes for orchestration
+- Prometheus and Grafana for monitoring
 
 ## Installation
 
@@ -46,9 +48,23 @@ For production:
 cp .env.prod.template .env.prod
 # Edit the .env.prod file with your configuration
 
-# Start the production environment
+# Start the production environment without monitoring
 docker-compose up -d api-prod dashboard-prod
+
+# Start the production environment with monitoring stack
+docker-compose up -d api-prod dashboard-prod prometheus grafana
 ```
+
+### Monitoring and Observability
+
+The project includes a comprehensive monitoring and observability stack:
+
+- Structured JSON logging with distributed tracing
+- Prometheus metrics for API and model performance
+- Grafana dashboards for visualization
+- Health check endpoints for Kubernetes
+
+For more details, see the [Monitoring and Observability Guide](docs/deployment/monitoring.md).
 
 ## Deployment
 

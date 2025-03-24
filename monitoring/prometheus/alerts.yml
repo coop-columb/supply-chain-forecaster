@@ -1,0 +1,56 @@
+groups:
+- name: supply-chain-forecaster
+  rules:
+  - alert: HighRequestLatency
+    expr: avg(request_duration_seconds) > 0.5
+    for: 1m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High request latency detected"
+      description: "Average request latency is above 500ms for more than 1 minute"
+
+  - alert: HighErrorRate
+    expr: rate(errors_total[5m]) > 0.01
+    for: 2m
+    labels:
+      severity: critical
+    annotations:
+      summary: "High error rate detected"
+      description: "Error rate is above 1% for more than 2 minutes"
+
+  - alert: APIDown
+    expr: up{job="api"} == 0
+    for: 30s
+    labels:
+      severity: critical
+    annotations:
+      summary: "API service is down"
+      description: "The API service has been down for more than 30 seconds"
+
+  - alert: DashboardDown
+    expr: up{job="dashboard"} == 0
+    for: 30s
+    labels:
+      severity: critical
+    annotations:
+      summary: "Dashboard service is down"
+      description: "The Dashboard service has been down for more than 30 seconds"
+
+  - alert: HighMemoryUsage
+    expr: memory_usage_bytes > 450000000
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High memory usage detected"
+      description: "Memory usage is above 450MB for more than 5 minutes"
+
+  - alert: HighCPUUsage
+    expr: cpu_usage_percent > 80
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High CPU usage detected"
+      description: "CPU usage is above 80% for more than 5 minutes"
