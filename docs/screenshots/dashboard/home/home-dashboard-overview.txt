@@ -1,0 +1,10 @@
+# Placeholder file instructions
+
+The real screenshot image file will replace this text file.
+This is a placeholder to establish the directory structure and naming convention.
+
+To create the actual screenshot:
+1. Navigate to the dashboard home page
+2. Take a screenshot of the entire dashboard interface
+3. Save as PNG with the same name as this file
+4. Replace this placeholder file with the PNG image
