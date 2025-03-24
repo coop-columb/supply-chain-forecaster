@@ -23,7 +23,7 @@ class DatabaseDataIngestion(DataIngestionBase):
     ):
         """
         Initialize the database data ingestion.
-        
+
         Args:
             source_name: Name of the data source.
             connection_string: Database connection string.
@@ -39,28 +39,30 @@ class DatabaseDataIngestion(DataIngestionBase):
     ) -> pd.DataFrame:
         """
         Extract data from a database using a SQL query.
-        
+
         Args:
             query: SQL query to execute.
             params: Parameters for the SQL query.
             **kwargs: Additional keyword arguments.
-        
+
         Returns:
             DataFrame containing the extracted data.
         """
         try:
             import sqlalchemy
-            
+
             logger.info(f"Extracting data from database with query: {query[:100]}...")
             engine = sqlalchemy.create_engine(self.connection_string)
-            
+
             with engine.connect() as connection:
                 return pd.read_sql(query, connection, params=params)
-        
+
         except ImportError:
-            logger.error("SQLAlchemy not installed. Please install with pip install sqlalchemy")
+            logger.error(
+                "SQLAlchemy not installed. Please install with pip install sqlalchemy"
+            )
             raise
-        
+
         except Exception as e:
             logger.error(f"Error extracting data from database: {str(e)}")
             raise

@@ -24,7 +24,7 @@ class CSVDataIngestion(DataIngestionBase):
     ):
         """
         Initialize the CSV data ingestion.
-        
+
         Args:
             source_name: Name of the data source.
             source_path: Path to the CSV file or directory containing CSV files.
@@ -33,10 +33,10 @@ class CSVDataIngestion(DataIngestionBase):
         """
         super().__init__(source_name, target_dir, file_format)
         self.source_path = Path(source_path)
-        
+
         if not self.source_path.exists():
             raise FileNotFoundError(f"Source path does not exist: {source_path}")
-        
+
         logger.info(f"CSV data ingestion configured with source path: {source_path}")
 
     def extract(
@@ -48,13 +48,13 @@ class CSVDataIngestion(DataIngestionBase):
     ) -> pd.DataFrame:
         """
         Extract data from CSV file(s).
-        
+
         Args:
             pattern: File pattern to match if source_path is a directory.
             recursive: Whether to search recursively in subdirectories.
             read_options: Options to pass to pandas.read_csv.
             **kwargs: Additional keyword arguments.
-        
+
         Returns:
             DataFrame containing the extracted data.
         """
@@ -65,9 +65,11 @@ class CSVDataIngestion(DataIngestionBase):
         }
         # Merge default options with provided options
         options = {**default_options, **read_options}
-        
-        logger.info(f"Extracting CSV data with pattern: {pattern}, recursive: {recursive}")
-        
+
+        logger.info(
+            f"Extracting CSV data with pattern: {pattern}, recursive: {recursive}"
+        )
+
         if self.source_path.is_file():
             # Single file
             logger.info(f"Reading single CSV file: {self.source_path}")
@@ -78,13 +80,13 @@ class CSVDataIngestion(DataIngestionBase):
                 files = list(self.source_path.rglob(pattern))
             else:
                 files = list(self.source_path.glob(pattern))
-            
+
             if not files:
                 logger.warning(f"No CSV files found matching pattern: {pattern}")
                 return pd.DataFrame()
-            
+
             logger.info(f"Found {len(files)} CSV files to process")
-            
+
             # Read all files and concatenate
             dfs = []
             for file in files:
@@ -94,12 +96,14 @@ class CSVDataIngestion(DataIngestionBase):
                     dfs.append(df)
                 except Exception as e:
                     logger.error(f"Error reading file {file}: {str(e)}")
-            
+
             if not dfs:
                 logger.warning("No data extracted from any CSV files")
                 return pd.DataFrame()
-            
+
             return pd.concat(dfs, ignore_index=True)
         else:
-            logger.error(f"Source path is neither a file nor a directory: {self.source_path}")
+            logger.error(
+                f"Source path is neither a file nor a directory: {self.source_path}"
+            )
             return pd.DataFrame()

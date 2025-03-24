@@ -28,7 +28,7 @@ class PreprocessingPipeline(DataPreprocessorBase):
     ):
         """
         Initialize the preprocessing pipeline.
-        
+
         Args:
             input_dir: Directory containing input data.
             output_dir: Directory to save processed data.
@@ -39,7 +39,7 @@ class PreprocessingPipeline(DataPreprocessorBase):
         super().__init__(input_dir, output_dir, file_format)
         self.date_column = date_column
         self.target_column = target_column
-        
+
         # Initialize preprocessing steps
         self.cleaner = DataCleaner(
             input_dir=input_dir,
@@ -48,7 +48,7 @@ class PreprocessingPipeline(DataPreprocessorBase):
             date_column=date_column,
             target_column=target_column,
         )
-        
+
         self.feature_engineer = FeatureEngineer(
             input_dir=input_dir,
             output_dir=output_dir,
@@ -56,7 +56,7 @@ class PreprocessingPipeline(DataPreprocessorBase):
             date_column=date_column,
             target_column=target_column,
         )
-        
+
         logger.info("Preprocessing pipeline initialized")
 
     def process(
@@ -70,7 +70,7 @@ class PreprocessingPipeline(DataPreprocessorBase):
     ) -> pd.DataFrame:
         """
         Run the preprocessing pipeline on the input dataframe.
-        
+
         Args:
             data: Input dataframe to process.
             clean_data: Whether to clean the data.
@@ -78,15 +78,15 @@ class PreprocessingPipeline(DataPreprocessorBase):
             clean_params: Parameters for the data cleaning step.
             feature_params: Parameters for the feature engineering step.
             **kwargs: Additional keyword arguments.
-        
+
         Returns:
             Processed dataframe.
         """
         logger.info(f"Running preprocessing pipeline on {len(data)} rows")
-        
+
         # Create a copy to avoid modifying the original
         df = data.copy()
-        
+
         # Data cleaning
         if clean_data:
             clean_params = clean_params or {}
@@ -96,7 +96,7 @@ class PreprocessingPipeline(DataPreprocessorBase):
                 default_value=df,
                 log_exceptions=True,
             )
-        
+
         # Feature engineering
         if engineer_features:
             feature_params = feature_params or {}
@@ -106,8 +106,10 @@ class PreprocessingPipeline(DataPreprocessorBase):
                 default_value=df,
                 log_exceptions=True,
             )
-        
-        logger.info(f"Preprocessing complete: {len(df)} rows, {len(df.columns)} columns")
+
+        logger.info(
+            f"Preprocessing complete: {len(df)} rows, {len(df.columns)} columns"
+        )
         return df
 
     def get_training_data(
@@ -121,7 +123,7 @@ class PreprocessingPipeline(DataPreprocessorBase):
     ) -> Dict[str, pd.DataFrame]:
         """
         Split the data into training, validation, and test sets.
-        
+
         Args:
             data: Input dataframe to split.
             train_ratio: Proportion of data to use for training.
@@ -129,12 +131,12 @@ class PreprocessingPipeline(DataPreprocessorBase):
             test_ratio: Proportion of data to use for testing.
             shuffle: Whether to shuffle the data before splitting.
             **kwargs: Additional keyword arguments.
-        
+
         Returns:
             Dictionary containing training, validation, and test sets.
         """
         logger.info(f"Splitting data into training, validation, and test sets")
-        
+
         if not np.isclose(train_ratio + validation_ratio + test_ratio, 1.0):
             logger.warning(
                 f"Split ratios do not sum to 1.0: "
@@ -149,63 +151,63 @@ class PreprocessingPipeline(DataPreprocessorBase):
                 f"Normalized ratios: "
                 f"train={train_ratio}, validation={validation_ratio}, test={test_ratio}"
             )
-        
+
         # Create a copy to avoid modifying the original
         df = data.copy()
-        
+
         # Check if date column exists for time-based split
         if self.date_column in df.columns and not shuffle:
             logger.info(f"Using time-based split with column '{self.date_column}'")
-            
+
             # Ensure date column is datetime type
             if not pd.api.types.is_datetime64_dtype(df[self.date_column]):
                 df[self.date_column] = pd.to_datetime(df[self.date_column])
-            
+
             # Sort by date
             df = df.sort_values(by=self.date_column)
-            
+
             # Calculate split indices
             n = len(df)
             train_end = int(n * train_ratio)
             val_end = train_end + int(n * validation_ratio)
-            
+
             # Split data
             train_data = df.iloc[:train_end]
             val_data = df.iloc[train_end:val_end]
             test_data = df.iloc[val_end:]
-            
+
             logger.info(
                 f"Time-based split: "
                 f"train={len(train_data)} rows ({train_data[self.date_column].min()} to {train_data[self.date_column].max()}), "
                 f"validation={len(val_data)} rows ({val_data[self.date_column].min()} to {val_data[self.date_column].max()}), "
                 f"test={len(test_data)} rows ({test_data[self.date_column].min()} to {test_data[self.date_column].max()})"
             )
-        
+
         else:
             logger.info("Using random split")
-            
+
             # Calculate split indices
             n = len(df)
             indices = np.arange(n)
-            
+
             if shuffle:
                 np.random.shuffle(indices)
-            
+
             train_end = int(n * train_ratio)
             val_end = train_end + int(n * validation_ratio)
-            
+
             # Split data
             train_data = df.iloc[indices[:train_end]]
             val_data = df.iloc[indices[train_end:val_end]]
             test_data = df.iloc[indices[val_end:]]
-            
+
             logger.info(
                 f"Random split: "
                 f"train={len(train_data)} rows, "
                 f"validation={len(val_data)} rows, "
                 f"test={len(test_data)} rows"
             )
-        
+
         return {
             "train": train_data,
             "validation": val_data,
