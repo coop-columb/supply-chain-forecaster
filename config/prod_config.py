@@ -1,5 +1,7 @@
 """Production configuration for the supply chain forecaster."""
 
+from pathlib import Path
+
 from config.base_config import BaseConfig
 
 
@@ -12,6 +14,12 @@ class ProdConfig(BaseConfig):
 
     # Standard logging level for production
     LOG_LEVEL = "INFO"
+    LOG_FORMAT = "json"
+    LOG_FILE = "/var/log/supply-chain-forecaster/app.log"
+    LOG_ROTATION = "100 MB"
+    LOG_RETENTION = "14 days"
+    LOG_JSON_FORMAT = True
+    LOG_ENVIRONMENT = "production"
 
     # Production mode settings
     USE_SYNTHETIC_DATA = False
@@ -25,7 +33,24 @@ class ProdConfig(BaseConfig):
     ENABLE_PERFORMANCE_MONITORING = True
     ENABLE_ERROR_TRACKING = True
     MONITORING_SAMPLE_RATE = 0.1
-
+    PROMETHEUS_METRICS = True
+    METRICS_ENDPOINT = "/metrics"
+    
+    # Logging and monitoring paths
+    METRICS_EXPORT_PATH = "/var/log/supply-chain-forecaster/metrics"
+    HEALTH_CHECK_PATH = "/health"
+    READINESS_CHECK_PATH = "/health/readiness"
+    LIVENESS_CHECK_PATH = "/health/liveness"
+    
+    # Request rate limiting
+    ENABLE_RATE_LIMITING = True
+    RATE_LIMIT_REQUESTS_PER_MINUTE = 60
+    
+    # Enable metrics collection
+    COLLECT_PREDICTION_METRICS = True
+    COLLECT_TRAINING_METRICS = True
+    COLLECT_API_METRICS = True
+    
     # Feature flags for production
     FEATURE_FLAG_ANOMALY_DETECTION = True
     FEATURE_FLAG_INTERACTIVE_VISUALIZATIONS = True

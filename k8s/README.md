@@ -74,15 +74,33 @@ kubectl scale deployment supply-chain-api --replicas=5
 kubectl scale deployment supply-chain-dashboard --replicas=3
 ```
 
-## Monitoring
+## Monitoring and Observability
 
-The deployments include readiness and liveness probes for basic health monitoring.
+The deployments include health check endpoints configured as readiness and liveness probes for Kubernetes monitoring.
 
-For advanced monitoring, consider implementing:
+A complete monitoring solution has been implemented:
 
-- Prometheus for metrics collection
-- Grafana for visualization
-- ELK stack for log aggregation
+- **Prometheus Metrics**: The API and Dashboard expose metrics endpoints on `/metrics`
+- **Grafana Dashboards**: Pre-configured dashboards for visualizing performance metrics
+- **Structured Logging**: JSON-formatted logs with distributed tracing via request IDs
+- **Alert Rules**: Configured in Prometheus for critical conditions
+
+### Deploying Monitoring Stack
+
+To deploy the monitoring components to Kubernetes:
+
+```bash
+# Create Prometheus and Grafana deployments
+kubectl apply -f k8s/prometheus-deployment.yaml
+kubectl apply -f k8s/grafana-deployment.yaml
+
+# Create configuration ConfigMaps
+kubectl create configmap prometheus-config --from-file=monitoring/prometheus/
+kubectl create configmap grafana-dashboards --from-file=monitoring/grafana/provisioning/dashboards/
+kubectl create configmap grafana-datasources --from-file=monitoring/grafana/provisioning/datasources/
+```
+
+For detailed information about the monitoring implementation, refer to the [Monitoring and Observability Guide](../docs/deployment/monitoring.md).
 
 ## Troubleshooting
 

@@ -118,12 +118,23 @@ For deploying to Kubernetes, refer to the [Kubernetes Deployment Guide](../../k8
 
 ## Monitoring and Logging
 
-The production configuration is designed to work with external monitoring and logging systems:
+The production configuration includes a comprehensive monitoring and observability solution:
 
-- JSON formatted logs for easy parsing
-- Health check endpoints for monitoring
-- Support for logs volume mounting
-- Proper signal handling for graceful shutdowns
+- **Structured Logging**: JSON formatted logs with distributed request IDs
+- **Metrics Collection**: Prometheus metrics exposed via dedicated endpoints
+- **Visualization**: Grafana dashboards for API, model, and system performance
+- **Health Checks**: Endpoints for Kubernetes readiness and liveness probes
+- **Alert Rules**: Prometheus alerting for critical conditions
+- **Resource Monitoring**: CPU and memory usage tracking
+
+The monitoring stack (Prometheus and Grafana) is included in the docker-compose.yml file:
+
+```bash
+# Start the production environment with monitoring
+docker-compose up -d api-prod dashboard-prod prometheus grafana
+```
+
+For detailed information about the monitoring implementation, refer to the [Monitoring and Observability Guide](monitoring.md).
 
 ## Troubleshooting
 

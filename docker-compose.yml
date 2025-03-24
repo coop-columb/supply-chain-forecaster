@@ -76,6 +76,7 @@ services:
       target: api-production
     ports:
       - "${API_PORT:-8000}:8000"
+      - "${API_METRICS_PORT:-9090}:9090"
     volumes:
       - model_data:/app/data/models
       - logs:/app/logs
@@ -83,6 +84,10 @@ services:
       - .env.prod
     environment:
       <<: *common-prod-variables
+      PROMETHEUS_METRICS: "true"
+      COLLECT_API_METRICS: "true"
+      COLLECT_PREDICTION_METRICS: "true"
+      METRICS_PORT: "9090"
     deploy:
       resources:
         limits:
@@ -111,6 +116,8 @@ services:
     environment:
       <<: *common-prod-variables
       API_URL: ${API_URL:-http://api-prod:8000}
+      COLLECT_API_METRICS: "true"
+      LOG_JSON_FORMAT: "true"
     depends_on:
       - api-prod
     deploy:
@@ -122,11 +129,46 @@ services:
           cpus: '0.25'
           memory: 256M
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8050/"]
+      test: ["CMD", "curl", "-f", "http://localhost:8050/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 10s
+      
+  # Monitoring stack for production
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.console.libraries=/etc/prometheus/console_libraries
+      - --web.console.templates=/etc/prometheus/consoles
+      - --web.enable-lifecycle
+    depends_on:
+      - api-prod
+      - dashboard-prod
+    restart: unless-stopped
+    
+  grafana:
+    image: grafana/grafana:10.0.0
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
 
 volumes:
   model_data:
