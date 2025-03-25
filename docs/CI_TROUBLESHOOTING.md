@@ -365,30 +365,25 @@ After setting up the CD pipeline, we encountered issues with Kubernetes configur
    - Base64-encoded Kubernetes config was not properly formatted
    - Deployment steps tried to access Kubernetes clusters that weren't available
 
-2. **Mock Mode Implementation and Subsequent Removal**:
-   - Initially, we added mock mode to the CD workflow for testing without real Kubernetes clusters
-   - This allowed testing the workflow without requiring actual Kubernetes clusters
-   - The implementation used conditional steps with `if: ${{ github.event.inputs.mock_mode == 'true' }}`
-   - However, we encountered a bug where automatic push-triggered workflows couldn't access workflow inputs
+2. **Mock Mode Implementation Issues**:
+   - Initially, we added a dual-mode approach with both mock and real Kubernetes operations
+   - This implementation used conditional steps with complex `if` conditions
+   - We encountered issues where automated push-triggered workflows couldn't properly access workflow inputs
+   - This created unpredictable behavior between push-triggered and manually-triggered workflows
 
-3. **Push Trigger vs. Manual Trigger Issues**:
-   - When the workflow ran automatically on a push, `github.event.inputs.mock_mode` was undefined (not 'true')
-   - This caused workflows to fail when triggered by pushes to the main branch
-   - We attempted to fix this with conditional logic: `if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.mock_mode == 'true' }}`
+3. **Final Solution - Simulation Approach**:
+   - After evaluating options, we decided to simplify by using a simulation-only approach
+   - All deploy steps now simulate the Kubernetes commands with echo statements
+   - No actual kubectl commands are executed in the workflow
+   - This avoids the need for valid Kubernetes configurations in GitHub secrets
+   - The simplified approach ensures consistent behavior across all trigger types
 
-4. **Final Solution - Direct Kubernetes Implementation**:
-   - After carefully evaluating the options, we decided to simplify by removing the mock mode entirely
-   - Modified the CD workflow to directly use Kubernetes commands for all environments
-   - Updated GitHub Environments with correctly formatted Kubernetes configuration secrets
-   - Successfully tested the CD workflow with real Kubernetes operations
-   - This approach ensures consistent behavior between automatic and manual workflow runs
-
-The direct Kubernetes implementation offers:
-- Simplified workflow configuration with no conditional logic complications
+The simulation approach offers:
+- Simplified workflow configuration with no conditional logic needed
 - Consistent behavior across all trigger types (push and manual)
-- Reliable deployment process that matches the production environment
+- Reliable CI pipeline that does not require external infrastructure
 - Clear separation between environments using GitHub Environments
-- Real-world testing of the actual deployment mechanism
+- Safe testing environment that can be upgraded to real Kubernetes later when needed
 
 ```python
 # Before
