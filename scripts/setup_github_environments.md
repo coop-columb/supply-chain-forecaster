@@ -2,6 +2,10 @@
 
 This guide explains how to set up the GitHub environments required for the Continuous Deployment (CD) pipeline.
 
+## Implementation Status
+
+**Important:** These setup steps must be completed before the CD pipeline will function. The workflow is configured and passes CI, but actual deployments will fail until these environments and secrets are configured.
+
 ## Required Environments
 
 The CD pipeline uses two environments:
@@ -48,7 +52,46 @@ Some secrets are needed at the repository level:
    - `REGISTRY_USERNAME`: Username for container registry (if using external registry)
    - `REGISTRY_PASSWORD`: Password for container registry (if using external registry)
 
-## Step 3: Configure Branch Protection Rules
+## Step 3: Generate Kubernetes Configuration Files
+
+The `KUBE_CONFIG_STAGING` and `KUBE_CONFIG_PRODUCTION` secrets require base64-encoded Kubernetes configuration files:
+
+1. Ensure you have `kubectl` installed and configured for your clusters
+2. For staging environment:
+   ```bash
+   # Switch to staging context
+   kubectl config use-context <your-staging-context-name>
+   
+   # Encode the kubeconfig file
+   cat ~/.kube/config | base64 -w 0 > kube_config_staging_base64.txt
+   ```
+
+3. For production environment:
+   ```bash
+   # Switch to production context
+   kubectl config use-context <your-production-context-name>
+   
+   # Encode the kubeconfig file
+   cat ~/.kube/config | base64 -w 0 > kube_config_production_base64.txt
+   ```
+
+4. Use the content of these files as the values for the corresponding secrets
+
+## Step 4: Generate API Keys
+
+Create secure API keys for authentication:
+
+```bash
+# Generate a random API key for staging
+openssl rand -hex 32 > api_key_staging.txt
+
+# Generate a random API key for production
+openssl rand -hex 32 > api_key_production.txt
+```
+
+Use the content of these files as the values for the corresponding secrets.
+
+## Step 5: Configure Branch Protection Rules
 
 1. Navigate to "Settings" > "Branches"
 2. Click on "Add rule"

@@ -6,6 +6,17 @@ This document describes the Continuous Deployment (CD) pipeline for the Supply C
 
 The CD pipeline automates the process of building, testing, and deploying the application to staging and production environments. It uses GitHub Actions to orchestrate the pipeline and Kubernetes for deployments.
 
+## Implementation Status
+
+**Note:** The CD pipeline is currently partially implemented:
+
+- ✅ The workflow configuration is complete (GitHub Action workflow file)
+- ✅ The build and push Docker images stage is functional
+- ⚠️ The deployment stages (staging/production) require environment setup
+- ⚠️ GitHub Environments and secrets need to be configured before testing
+
+See [Setting Up GitHub Environments](../../scripts/setup_github_environments.md) for instructions on completing the setup.
+
 ## Pipeline Stages
 
 The CD pipeline consists of the following stages:

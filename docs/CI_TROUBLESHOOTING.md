@@ -316,6 +316,46 @@ When extending the Docker configuration for production use, we encountered CI te
 
 Fix: Updated the test to use the correct parameter names:
 
+### 10. Re-enabled Strict Formatting Checks (March 2025)
+
+As part of the CI improvements initiative:
+
+1. **Re-enabled strict Black formatting checks**:
+   - Modified CI workflow to fail if Black formatting is not compliant
+   - Updated the workflow file to remove the "continue on error" behavior
+   - Error: `3 files would be reformatted, 85 files would be left unchanged`
+
+2. **Re-enabled strict isort import sorting**:
+   - Modified CI workflow to fail if imports are not properly sorted
+   - Removed the "continue on error" behavior from the workflow
+
+Fix:
+- Ran Black formatter on all files: `black .`
+- Ran isort with Black profile on all files: `isort --profile black .`
+- Committed the formatted files
+- Added pre-commit hooks to ensure formatting is maintained
+- Created setup scripts for development environment
+
+### 11. Fixed Deployment Verification Test Issues (March 2025)
+
+After implementing a CD pipeline, there were issues with new deployment verification tests:
+
+1. **Tests failing in CI environment**:
+   - Error: `ConnectionRefusedError: [Errno 111] Connection refused`
+   - New deployment verification tests tried to connect to non-existent services during CI
+   - These tests were designed for CD environment but were running in CI too
+
+Fix:
+- Added a `pytestmark` to skip these tests during normal CI runs:
+  ```python
+  pytestmark = pytest.mark.skipif(
+      os.environ.get("DEPLOYMENT_VERIFICATION") != "true",
+      reason="Deployment verification tests only run when explicitly enabled",
+  )
+  ```
+- Updated the CD workflow to set `DEPLOYMENT_VERIFICATION=true` when running these tests
+- Added clear documentation in the test file explaining their purpose
+
 ```python
 # Before
 time_series_fig = create_time_series_chart(df, x='date', y='value', title='Test Time Series')
