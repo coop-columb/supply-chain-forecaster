@@ -46,17 +46,13 @@ jobs:
         
     - name: Check formatting with black
       run: |
-        # Report black formatting issues but continue the build
-        black --check . || echo "Black formatting issues found, but continuing build"
-        # Set exit code to 0 to prevent build failure
-        true
+        # Strictly enforce black formatting
+        black --check .
         
     - name: Check imports with isort
       run: |
-        # Report isort import issues but continue the build
-        isort --check --profile black . || echo "Import sorting issues found, but continuing build"
-        # Set exit code to 0 to prevent build failure
-        true
+        # Strictly enforce import sorting
+        isort --check --profile black .
         
     - name: Type check with mypy
       run: |
