@@ -12,10 +12,11 @@ The CD pipeline automates the process of building, testing, and deploying the ap
 
 - ✅ The workflow configuration is complete (GitHub Action workflow file)
 - ✅ The build and push Docker images stage is functional
+- ✅ Automation script for generating required secrets is available
 - ⚠️ The deployment stages (staging/production) require environment setup
 - ⚠️ GitHub Environments and secrets need to be configured before testing
 
-See [Setting Up GitHub Environments](../../scripts/setup_github_environments.md) for instructions on completing the setup.
+See [Setting Up GitHub Environments](../../scripts/setup_github_environments.md) for instructions on completing the setup. You can use the provided automation script (`scripts/generate_cd_secrets.sh`) to generate all required secrets.
 
 ## Pipeline Stages
 
