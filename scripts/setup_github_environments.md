@@ -6,6 +6,17 @@ This guide explains how to set up the GitHub environments required for the Conti
 
 **Important:** These setup steps must be completed before the CD pipeline will function. The workflow is configured and passes CI, but actual deployments will fail until these environments and secrets are configured.
 
+## Testing and Setup Tools
+
+To facilitate the setup process, we provide additional tools:
+
+- `scripts/generate_cd_secrets_test.sh`: Non-interactive test version for generating secrets
+- `scripts/test_cd_workflow.sh`: Script to verify CD workflow components
+- `scripts/github_environments_checklist.md`: Step-by-step checklist for GitHub Environments setup
+- `scripts/roadmap_update_template.md`: Template for updating the roadmap after CD completion
+
+These tools help verify the CD workflow is properly configured before setting up GitHub Environments.
+
 ## Required Environments
 
 The CD pipeline uses two environments:

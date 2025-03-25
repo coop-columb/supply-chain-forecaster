@@ -18,6 +18,13 @@ The CD pipeline automates the process of building, testing, and deploying the ap
 
 See [Setting Up GitHub Environments](../../scripts/setup_github_environments.md) for instructions on completing the setup. You can use the provided automation script (`scripts/generate_cd_secrets.sh`) to generate all required secrets.
 
+We also provide additional tools to help with testing and verifying the CD workflow:
+- `scripts/generate_cd_secrets_test.sh`: Non-interactive test version for generating secrets
+- `scripts/test_cd_workflow.sh`: Script to verify CD workflow components locally
+- `scripts/github_environments_checklist.md`: Step-by-step checklist for GitHub Environments setup
+
+It is recommended to run `test_cd_workflow.sh` before proceeding with GitHub Environments setup to ensure all components are properly configured.
+
 ## Pipeline Stages
 
 The CD pipeline consists of the following stages:
