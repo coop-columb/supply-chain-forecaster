@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: api
-        image: ${DOCKER_REGISTRY}/supply-chain-forecaster-api:${VERSION}
+        image: ghcr.io/coop-columb/supply-chain-forecaster-api:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 8000

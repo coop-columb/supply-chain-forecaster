@@ -2,42 +2,59 @@
 
 This directory contains Kubernetes manifests for deploying the Supply Chain Forecaster to a Kubernetes cluster.
 
-## Prerequisites
+## Deployment Methods
 
-- A Kubernetes cluster
-- kubectl configured to communicate with your cluster
-- A container registry where you can push Docker images
+There are two ways to deploy the application to Kubernetes:
 
-## Deployment Steps
+1. **Automated Deployment (Recommended)**: Using the CI/CD pipeline
+2. **Manual Deployment**: Using kubectl directly
+
+## Automated Deployment with CI/CD
+
+The project includes a comprehensive CI/CD pipeline for automated deployments. The pipeline will:
+
+1. Build and push Docker images to GitHub Container Registry (ghcr.io)
+2. Deploy to the staging environment automatically on pushes to main
+3. Deploy to production after approval or with a specially tagged commit
+
+### Prerequisites for CI/CD
+
+- GitHub Repository with GitHub Actions enabled
+- GitHub Environments set up (staging and production)
+- Kubernetes clusters for staging and production
+- Kubernetes configuration files encoded as secrets
+
+For detailed setup instructions, see [Setting Up GitHub Environments](../scripts/setup_github_environments.md).
+
+## Manual Deployment Steps
 
 ### 1. Build and Push Docker Images
 
 ```bash
-# Set version and registry
-export VERSION=1.0.0
-export DOCKER_REGISTRY=your-registry.example.com
+# Build and push using the script
+./scripts/build_push_images.sh 1.0.0 ghcr.io/your-username
 
-# Build API image
-docker build -t ${DOCKER_REGISTRY}/supply-chain-forecaster-api:${VERSION} \
-  --target production \
-  --build-arg SERVICE=api .
+# Or manually:
+docker build -t ghcr.io/your-username/supply-chain-forecaster-api:1.0.0 \
+  --target api-production .
 
-# Build Dashboard image
-docker build -t ${DOCKER_REGISTRY}/supply-chain-forecaster-dashboard:${VERSION} \
-  --target production \
-  --build-arg SERVICE=dashboard .
+docker build -t ghcr.io/your-username/supply-chain-forecaster-dashboard:1.0.0 \
+  --target dashboard-production .
 
-# Push images to registry
-docker push ${DOCKER_REGISTRY}/supply-chain-forecaster-api:${VERSION}
-docker push ${DOCKER_REGISTRY}/supply-chain-forecaster-dashboard:${VERSION}
+docker push ghcr.io/your-username/supply-chain-forecaster-api:1.0.0
+docker push ghcr.io/your-username/supply-chain-forecaster-dashboard:1.0.0
 ```
 
 ### 2. Apply Kubernetes Manifests
 
 ```bash
-# Replace placeholder variables in manifests
-envsubst < k8s/api-deployment.yaml | kubectl apply -f -
-envsubst < k8s/dashboard-deployment.yaml | kubectl apply -f -
+# Update image references in manifests
+sed -i "s|image: ghcr.io/coop-columb/supply-chain-forecaster-api:latest|image: ghcr.io/your-username/supply-chain-forecaster-api:1.0.0|g" k8s/api-deployment.yaml
+sed -i "s|image: ghcr.io/coop-columb/supply-chain-forecaster-dashboard:latest|image: ghcr.io/your-username/supply-chain-forecaster-dashboard:1.0.0|g" k8s/dashboard-deployment.yaml
+
+# Apply manifests
+kubectl apply -f k8s/api-deployment.yaml
+kubectl apply -f k8s/dashboard-deployment.yaml
 kubectl apply -f k8s/ingress.yaml
 ```
 

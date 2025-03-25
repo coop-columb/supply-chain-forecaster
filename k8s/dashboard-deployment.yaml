@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: dashboard
-        image: ${DOCKER_REGISTRY}/supply-chain-forecaster-dashboard:${VERSION}
+        image: ghcr.io/coop-columb/supply-chain-forecaster-dashboard:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 8050
