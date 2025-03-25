@@ -53,14 +53,34 @@ The pipeline supports two deployment modes:
    - Simulates Kubernetes operations with echo statements
    - Does not require actual Kubernetes clusters or configuration
    - Safe for CI/CD testing and demonstration
-   - Used when no mode is explicitly specified
+   - Used when no Kubernetes configurations are available
 
 2. **Real Deployment Mode:**
-   - Available through manual workflow triggers
    - Performs actual Kubernetes deployments to real clusters
    - Requires properly configured Kubernetes secrets
-   - Must be explicitly enabled with the `real_deployment` input
-   - Only available in manual workflow runs
+   - Automatically used when valid Kubernetes configurations are detected
+   - Provides real-world deployment verification
+
+### Forcing Simulation Mode
+
+For portfolio demonstration or when you don't have access to a Kubernetes cluster, you can force simulation mode using the provided utility script:
+
+```bash
+./scripts/ci_cd_utils.sh force-simulation
+```
+
+This will set empty values for the Kubernetes configuration secrets, forcing the CD pipeline to use simulation mode.
+
+### Setting up Real Deployments
+
+To use real deployment mode, follow these steps:
+
+1. Set up a Kubernetes cluster using the instructions in [kubernetes_setup.md](kubernetes_setup.md)
+2. Configure the GitHub environment secrets with the required Kubernetes configurations
+3. Reset the simulation mode override (if previously set):
+   ```bash
+   ./scripts/ci_cd_utils.sh reset-simulation
+   ```
 
 ## Triggering the Pipeline
 
