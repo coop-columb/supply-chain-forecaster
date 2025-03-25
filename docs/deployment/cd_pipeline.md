@@ -14,7 +14,7 @@ The CD pipeline automates the process of building, testing, and deploying the ap
 - ✅ The build and push Docker images stage is functional
 - ✅ Automation script for generating required secrets is available
 - ✅ GitHub Environments and secrets have been configured
-- ✅ Mock mode has been added for testing without real Kubernetes clusters
+- ✅ The workflow has been refined to directly use Kubernetes commands
 - ✅ The workflow has been successfully tested and verified
 
 See [Setting Up GitHub Environments](../../scripts/setup_github_environments.md) for details on the environment configuration. You can use the provided automation script (`scripts/generate_cd_secrets.sh`) to generate all required secrets.
@@ -56,7 +56,7 @@ The CD pipeline can be triggered in the following ways:
    - Select the "Continuous Deployment" workflow
    - Click "Run workflow"
    - Choose the environment (staging or production)
-   - Optionally specify a version tag
+   - Optionally specify a version tag (defaults to commit SHA)
 
 3. **Automatic Production Deployment:**
    - Push to the `main` branch with `[deploy-prod]` in the commit message

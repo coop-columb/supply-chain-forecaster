@@ -20,11 +20,6 @@ on:
         description: 'Version tag to deploy (defaults to "latest")'
         required: false
         type: string
-      mock_mode:
-        description: 'Run in mock mode (no actual kubectl commands)'
-        required: false
-        type: boolean
-        default: true
 
 env:
   REGISTRY: ghcr.io
@@ -117,13 +112,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
       
-      # Only include these steps in real mode (not mock mode)
       - name: Set up kubectl
-        if: ${{ github.event.inputs.mock_mode != 'true' }}
         uses: azure/setup-kubectl@v3
       
-      - name: Configure Kubernetes context (Real Mode)
-        if: ${{ github.event.inputs.mock_mode != 'true' }}
+      - name: Configure Kubernetes context
         uses: azure/k8s-set-context@v3
         with:
           method: kubeconfig
@@ -134,49 +126,18 @@ jobs:
           sed -i "s|image: .*supply-chain-forecaster-api:.*|image: ${{ needs.build-and-push.outputs.api_image }}|g" k8s/api-deployment.yaml
           sed -i "s|image: .*supply-chain-forecaster-dashboard:.*|image: ${{ needs.build-and-push.outputs.dashboard_image }}|g" k8s/dashboard-deployment.yaml
       
-      # Mock deployment for testing
-      - name: Deploy to Kubernetes (Mock Mode)
-        if: ${{ github.event.inputs.mock_mode == 'true' }}
-        run: |
-          echo "MOCK MODE: Simulating kubectl apply"
-          echo "MOCK: kubectl apply -f k8s/api-deployment.yaml"
-          echo "MOCK: kubectl apply -f k8s/dashboard-deployment.yaml"
-          echo "MOCK: kubectl apply -f k8s/ingress.yaml"
-      
-      # Real deployment
-      - name: Deploy to Kubernetes (Real Mode)
-        if: ${{ github.event.inputs.mock_mode != 'true' }}
+      - name: Deploy to Kubernetes
         run: |
           kubectl apply -f k8s/api-deployment.yaml
           kubectl apply -f k8s/dashboard-deployment.yaml
           kubectl apply -f k8s/ingress.yaml
       
-      # Mock verification
-      - name: Verify deployment (Mock Mode)
-        if: ${{ github.event.inputs.mock_mode == 'true' }}
-        run: |
-          echo "MOCK MODE: Simulating kubectl rollout status"
-          echo "MOCK: kubectl rollout status deployment/supply-chain-api -n default"
-          echo "MOCK: kubectl rollout status deployment/supply-chain-dashboard -n default"
-      
-      # Real verification
-      - name: Verify deployment (Real Mode)
-        if: ${{ github.event.inputs.mock_mode != 'true' }}
+      - name: Verify deployment
         run: |
           kubectl rollout status deployment/supply-chain-api -n default
           kubectl rollout status deployment/supply-chain-dashboard -n default
       
-      # Mock verification tests
-      - name: Run deployment verification tests (Mock Mode)
-        if: ${{ github.event.inputs.mock_mode == 'true' }}
-        run: |
-          echo "MOCK MODE: Running verification tests against staging environment"
-          echo "MOCK: Setting testing environment variables"
-          echo "MOCK: pytest tests/e2e/test_deployment_verification.py -v"
-      
-      # Real verification tests
-      - name: Run deployment verification tests (Real Mode)
-        if: ${{ github.event.inputs.mock_mode != 'true' }}
+      - name: Run deployment verification tests
         run: |
           echo "Running verification tests against staging environment"
           # Set testing environment variables
@@ -217,13 +178,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
       
-      # Only include these steps in real mode (not mock mode)
       - name: Set up kubectl
-        if: ${{ github.event.inputs.mock_mode != 'true' }}
         uses: azure/setup-kubectl@v3
       
-      - name: Configure Kubernetes context (Real Mode)
-        if: ${{ github.event.inputs.mock_mode != 'true' }}
+      - name: Configure Kubernetes context
         uses: azure/k8s-set-context@v3
         with:
           method: kubeconfig
@@ -234,49 +192,18 @@ jobs:
           sed -i "s|image: .*supply-chain-forecaster-api:.*|image: ${{ needs.build-and-push.outputs.api_image }}|g" k8s/api-deployment.yaml
           sed -i "s|image: .*supply-chain-forecaster-dashboard:.*|image: ${{ needs.build-and-push.outputs.dashboard_image }}|g" k8s/dashboard-deployment.yaml
       
-      # Mock deployment for testing
-      - name: Deploy to Kubernetes (Mock Mode)
-        if: ${{ github.event.inputs.mock_mode == 'true' }}
-        run: |
-          echo "MOCK MODE: Simulating kubectl apply"
-          echo "MOCK: kubectl apply -f k8s/api-deployment.yaml"
-          echo "MOCK: kubectl apply -f k8s/dashboard-deployment.yaml"
-          echo "MOCK: kubectl apply -f k8s/ingress.yaml"
-      
-      # Real deployment
-      - name: Deploy to Kubernetes (Real Mode)
-        if: ${{ github.event.inputs.mock_mode != 'true' }}
+      - name: Deploy to Kubernetes
         run: |
           kubectl apply -f k8s/api-deployment.yaml
           kubectl apply -f k8s/dashboard-deployment.yaml
           kubectl apply -f k8s/ingress.yaml
       
-      # Mock verification
-      - name: Verify deployment (Mock Mode)
-        if: ${{ github.event.inputs.mock_mode == 'true' }}
-        run: |
-          echo "MOCK MODE: Simulating kubectl rollout status"
-          echo "MOCK: kubectl rollout status deployment/supply-chain-api -n default"
-          echo "MOCK: kubectl rollout status deployment/supply-chain-dashboard -n default"
-      
-      # Real verification
-      - name: Verify deployment (Real Mode)
-        if: ${{ github.event.inputs.mock_mode != 'true' }}
+      - name: Verify deployment
         run: |
           kubectl rollout status deployment/supply-chain-api -n default
           kubectl rollout status deployment/supply-chain-dashboard -n default
       
-      # Mock verification tests
-      - name: Run deployment verification tests (Mock Mode)
-        if: ${{ github.event.inputs.mock_mode == 'true' }}
-        run: |
-          echo "MOCK MODE: Running verification tests against production environment"
-          echo "MOCK: Setting testing environment variables"
-          echo "MOCK: pytest tests/e2e/test_deployment_verification.py -v"
-      
-      # Real verification tests
-      - name: Run deployment verification tests (Real Mode)
-        if: ${{ github.event.inputs.mock_mode != 'true' }}
+      - name: Run deployment verification tests
         run: |
           echo "Running verification tests against production environment"
           # Set testing environment variables

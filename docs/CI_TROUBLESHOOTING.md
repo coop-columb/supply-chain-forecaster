@@ -356,7 +356,7 @@ Fix:
 - Updated the CD workflow to set `DEPLOYMENT_VERIFICATION=true` when running these tests
 - Added clear documentation in the test file explaining their purpose
 
-### 12. CD Environment Setup and Mock Mode Implementation (March 2025)
+### 12. CD Environment Setup and Workflow Refinement (March 2025)
 
 After setting up the CD pipeline, we encountered issues with Kubernetes configuration and cluster connectivity:
 
@@ -365,18 +365,30 @@ After setting up the CD pipeline, we encountered issues with Kubernetes configur
    - Base64-encoded Kubernetes config was not properly formatted
    - Deployment steps tried to access Kubernetes clusters that weren't available
 
-Fix:
-- Added mock mode to the CD workflow for testing without real Kubernetes clusters
-- Modified the workflow to conditionally skip Kubernetes configuration steps in mock mode
-- Added clear documentation of the mock mode in the CD workflow file
-- Updated GitHub Environments with correctly formatted secrets
-- Successfully tested the CD workflow with mock mode enabled
+2. **Mock Mode Implementation and Subsequent Removal**:
+   - Initially, we added mock mode to the CD workflow for testing without real Kubernetes clusters
+   - This allowed testing the workflow without requiring actual Kubernetes clusters
+   - The implementation used conditional steps with `if: ${{ github.event.inputs.mock_mode == 'true' }}`
+   - However, we encountered a bug where automatic push-triggered workflows couldn't access workflow inputs
 
-The mock mode implementation allows:
-- Testing the full CD pipeline without requiring actual Kubernetes clusters
-- Verifying the workflow steps and configuration are correct
-- Staging the transition to real clusters when ready
-- Setting mock mode as the default for easier development
+3. **Push Trigger vs. Manual Trigger Issues**:
+   - When the workflow ran automatically on a push, `github.event.inputs.mock_mode` was undefined (not 'true')
+   - This caused workflows to fail when triggered by pushes to the main branch
+   - We attempted to fix this with conditional logic: `if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.mock_mode == 'true' }}`
+
+4. **Final Solution - Direct Kubernetes Implementation**:
+   - After carefully evaluating the options, we decided to simplify by removing the mock mode entirely
+   - Modified the CD workflow to directly use Kubernetes commands for all environments
+   - Updated GitHub Environments with correctly formatted Kubernetes configuration secrets
+   - Successfully tested the CD workflow with real Kubernetes operations
+   - This approach ensures consistent behavior between automatic and manual workflow runs
+
+The direct Kubernetes implementation offers:
+- Simplified workflow configuration with no conditional logic complications
+- Consistent behavior across all trigger types (push and manual)
+- Reliable deployment process that matches the production environment
+- Clear separation between environments using GitHub Environments
+- Real-world testing of the actual deployment mechanism
 
 ```python
 # Before
