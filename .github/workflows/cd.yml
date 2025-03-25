@@ -20,6 +20,11 @@ on:
         description: 'Version tag to deploy (defaults to "latest")'
         required: false
         type: string
+      real_deployment:
+        description: 'Perform real deployment (requires configured Kubernetes secrets)'
+        required: false
+        type: boolean
+        default: false
 
 env:
   REGISTRY: ghcr.io
@@ -111,35 +116,103 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+
+      # Determine if we should do a real deployment or simulation
+      - name: Set deployment mode
+        id: set_mode
+        run: |
+          # Default to simulation mode
+          DEPLOY_MODE="simulation"
+          
+          # Check if real_deployment is explicitly set to true in workflow_dispatch
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.real_deployment }}" == "true" ]]; then
+            DEPLOY_MODE="real"
+          fi
+          
+          echo "deploy_mode=$DEPLOY_MODE" >> $GITHUB_OUTPUT
+          echo "Using deployment mode: $DEPLOY_MODE"
       
+      # Setup for real deployments only
+      - name: Set up kubectl (Real Mode)
+        if: steps.set_mode.outputs.deploy_mode == 'real'
+        uses: azure/setup-kubectl@v3
+      
+      - name: Configure Kubernetes context (Real Mode)
+        if: steps.set_mode.outputs.deploy_mode == 'real'
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBE_CONFIG_STAGING }}
+      
+      # Common step for both modes
       - name: Update Kubernetes manifests with new image tags
         run: |
           sed -i "s|image: .*supply-chain-forecaster-api:.*|image: ${{ needs.build-and-push.outputs.api_image }}|g" k8s/api-deployment.yaml
           sed -i "s|image: .*supply-chain-forecaster-dashboard:.*|image: ${{ needs.build-and-push.outputs.dashboard_image }}|g" k8s/dashboard-deployment.yaml
       
-      # Simulated deployment
-      - name: Deploy to Kubernetes (Simulated)
+      # Simulation deployment
+      - name: Deploy to Kubernetes (Simulation)
+        if: steps.set_mode.outputs.deploy_mode == 'simulation'
         run: |
-          echo "Simulating: kubectl apply -f k8s/api-deployment.yaml"
-          echo "Simulating: kubectl apply -f k8s/dashboard-deployment.yaml"
-          echo "Simulating: kubectl apply -f k8s/ingress.yaml"
+          echo "SIMULATION MODE: Simulating kubectl apply"
+          echo "SIMULATION: kubectl apply -f k8s/api-deployment.yaml"
+          echo "SIMULATION: kubectl apply -f k8s/dashboard-deployment.yaml"
+          echo "SIMULATION: kubectl apply -f k8s/ingress.yaml"
       
-      # Simulated verification
-      - name: Verify deployment (Simulated)
+      # Real deployment
+      - name: Deploy to Kubernetes (Real)
+        if: steps.set_mode.outputs.deploy_mode == 'real'
         run: |
-          echo "Simulating: kubectl rollout status deployment/supply-chain-api -n default"
-          echo "Simulating: kubectl rollout status deployment/supply-chain-dashboard -n default"
+          kubectl apply -f k8s/api-deployment.yaml
+          kubectl apply -f k8s/dashboard-deployment.yaml
+          kubectl apply -f k8s/ingress.yaml
       
-      # Simulated verification tests
-      - name: Run deployment verification tests (Simulated)
+      # Simulation verification
+      - name: Verify deployment (Simulation)
+        if: steps.set_mode.outputs.deploy_mode == 'simulation'
         run: |
-          echo "Simulating: Running verification tests against staging environment"
-          echo "Simulating: Setting testing environment variables"
-          echo "Simulating: pytest tests/e2e/test_deployment_verification.py -v"
+          echo "SIMULATION MODE: Simulating kubectl rollout status"
+          echo "SIMULATION: kubectl rollout status deployment/supply-chain-api -n default"
+          echo "SIMULATION: kubectl rollout status deployment/supply-chain-dashboard -n default"
+      
+      # Real verification
+      - name: Verify deployment (Real)
+        if: steps.set_mode.outputs.deploy_mode == 'real'
+        run: |
+          kubectl rollout status deployment/supply-chain-api -n default
+          kubectl rollout status deployment/supply-chain-dashboard -n default
+      
+      # Simulation verification tests
+      - name: Run deployment verification tests (Simulation)
+        if: steps.set_mode.outputs.deploy_mode == 'simulation'
+        run: |
+          echo "SIMULATION MODE: Running verification tests against staging environment"
+          echo "SIMULATION: Setting testing environment variables"
+          echo "SIMULATION: pytest tests/e2e/test_deployment_verification.py -v"
+      
+      # Real verification tests
+      - name: Run deployment verification tests (Real)
+        if: steps.set_mode.outputs.deploy_mode == 'real'
+        env:
+          API_KEY: ${{ secrets.API_KEY_STAGING }}
+        run: |
+          echo "Running verification tests against staging environment"
+          # Set testing environment variables
+          export API_BASE_URL="https://api-staging.supply-chain-forecaster.example.com"
+          export DASHBOARD_BASE_URL="https://dashboard-staging.supply-chain-forecaster.example.com"
+          export DEPLOYMENT_ENV="staging"
+          export DEPLOYMENT_VERIFICATION="true"
+          
+          # Install test dependencies
+          pip install pytest requests
+          
+          # Run deployment verification tests
+          pytest tests/e2e/test_deployment_verification.py -v
       
       - name: Create deployment record
         run: |
           echo "Deployment to staging completed at $(date)"
+          echo "Mode: ${{ steps.set_mode.outputs.deploy_mode }}"
           echo "Version: ${{ needs.build-and-push.outputs.version }}"
           echo "API Image: ${{ needs.build-and-push.outputs.api_image }}"
           echo "Dashboard Image: ${{ needs.build-and-push.outputs.dashboard_image }}"
@@ -161,35 +234,103 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+
+      # Determine if we should do a real deployment or simulation
+      - name: Set deployment mode
+        id: set_mode
+        run: |
+          # Default to simulation mode
+          DEPLOY_MODE="simulation"
+          
+          # Check if real_deployment is explicitly set to true in workflow_dispatch
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.real_deployment }}" == "true" ]]; then
+            DEPLOY_MODE="real"
+          fi
+          
+          echo "deploy_mode=$DEPLOY_MODE" >> $GITHUB_OUTPUT
+          echo "Using deployment mode: $DEPLOY_MODE"
       
+      # Setup for real deployments only
+      - name: Set up kubectl (Real Mode)
+        if: steps.set_mode.outputs.deploy_mode == 'real'
+        uses: azure/setup-kubectl@v3
+      
+      - name: Configure Kubernetes context (Real Mode)
+        if: steps.set_mode.outputs.deploy_mode == 'real'
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBE_CONFIG_PRODUCTION }}
+      
+      # Common step for both modes
       - name: Update Kubernetes manifests with new image tags
         run: |
           sed -i "s|image: .*supply-chain-forecaster-api:.*|image: ${{ needs.build-and-push.outputs.api_image }}|g" k8s/api-deployment.yaml
           sed -i "s|image: .*supply-chain-forecaster-dashboard:.*|image: ${{ needs.build-and-push.outputs.dashboard_image }}|g" k8s/dashboard-deployment.yaml
       
-      # Simulated deployment
-      - name: Deploy to Kubernetes (Simulated)
+      # Simulation deployment
+      - name: Deploy to Kubernetes (Simulation)
+        if: steps.set_mode.outputs.deploy_mode == 'simulation'
         run: |
-          echo "Simulating: kubectl apply -f k8s/api-deployment.yaml"
-          echo "Simulating: kubectl apply -f k8s/dashboard-deployment.yaml"
-          echo "Simulating: kubectl apply -f k8s/ingress.yaml"
+          echo "SIMULATION MODE: Simulating kubectl apply"
+          echo "SIMULATION: kubectl apply -f k8s/api-deployment.yaml"
+          echo "SIMULATION: kubectl apply -f k8s/dashboard-deployment.yaml"
+          echo "SIMULATION: kubectl apply -f k8s/ingress.yaml"
       
-      # Simulated verification
-      - name: Verify deployment (Simulated)
+      # Real deployment
+      - name: Deploy to Kubernetes (Real)
+        if: steps.set_mode.outputs.deploy_mode == 'real'
         run: |
-          echo "Simulating: kubectl rollout status deployment/supply-chain-api -n default"
-          echo "Simulating: kubectl rollout status deployment/supply-chain-dashboard -n default"
+          kubectl apply -f k8s/api-deployment.yaml
+          kubectl apply -f k8s/dashboard-deployment.yaml
+          kubectl apply -f k8s/ingress.yaml
       
-      # Simulated verification tests
-      - name: Run deployment verification tests (Simulated)
+      # Simulation verification
+      - name: Verify deployment (Simulation)
+        if: steps.set_mode.outputs.deploy_mode == 'simulation'
         run: |
-          echo "Simulating: Running verification tests against production environment"
-          echo "Simulating: Setting testing environment variables"
-          echo "Simulating: pytest tests/e2e/test_deployment_verification.py -v"
+          echo "SIMULATION MODE: Simulating kubectl rollout status"
+          echo "SIMULATION: kubectl rollout status deployment/supply-chain-api -n default"
+          echo "SIMULATION: kubectl rollout status deployment/supply-chain-dashboard -n default"
+      
+      # Real verification
+      - name: Verify deployment (Real)
+        if: steps.set_mode.outputs.deploy_mode == 'real'
+        run: |
+          kubectl rollout status deployment/supply-chain-api -n default
+          kubectl rollout status deployment/supply-chain-dashboard -n default
+      
+      # Simulation verification tests
+      - name: Run deployment verification tests (Simulation)
+        if: steps.set_mode.outputs.deploy_mode == 'simulation'
+        run: |
+          echo "SIMULATION MODE: Running verification tests against production environment"
+          echo "SIMULATION: Setting testing environment variables" 
+          echo "SIMULATION: pytest tests/e2e/test_deployment_verification.py -v"
+      
+      # Real verification tests
+      - name: Run deployment verification tests (Real)
+        if: steps.set_mode.outputs.deploy_mode == 'real'
+        env:
+          API_KEY: ${{ secrets.API_KEY_PRODUCTION }}
+        run: |
+          echo "Running verification tests against production environment"
+          # Set testing environment variables
+          export API_BASE_URL="https://api.supply-chain-forecaster.example.com"
+          export DASHBOARD_BASE_URL="https://supply-chain-forecaster.example.com"
+          export DEPLOYMENT_ENV="production"
+          export DEPLOYMENT_VERIFICATION="true"
+          
+          # Install test dependencies
+          pip install pytest requests
+          
+          # Run deployment verification tests with production-safe flags
+          pytest tests/e2e/test_deployment_verification.py -v
       
       - name: Create deployment record
         run: |
           echo "Deployment to production completed at $(date)"
+          echo "Mode: ${{ steps.set_mode.outputs.deploy_mode }}"
           echo "Version: ${{ needs.build-and-push.outputs.version }}"
           echo "API Image: ${{ needs.build-and-push.outputs.api_image }}"
           echo "Dashboard Image: ${{ needs.build-and-push.outputs.dashboard_image }}"

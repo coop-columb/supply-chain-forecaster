@@ -365,25 +365,25 @@ After setting up the CD pipeline, we encountered issues with Kubernetes configur
    - Base64-encoded Kubernetes config was not properly formatted
    - Deployment steps tried to access Kubernetes clusters that weren't available
 
-2. **Mock Mode Implementation Issues**:
-   - Initially, we added a dual-mode approach with both mock and real Kubernetes operations
-   - This implementation used conditional steps with complex `if` conditions
-   - We encountered issues where automated push-triggered workflows couldn't properly access workflow inputs
+2. **Deployment Mode Implementation Challenges**:
+   - Initially, we had issues with the workflow_dispatch vs push event conditional logic
+   - The workflow was failing because `github.event.inputs.mock_mode` was undefined in push events
    - This created unpredictable behavior between push-triggered and manually-triggered workflows
 
-3. **Final Solution - Simulation Approach**:
-   - After evaluating options, we decided to simplify by using a simulation-only approach
-   - All deploy steps now simulate the Kubernetes commands with echo statements
-   - No actual kubectl commands are executed in the workflow
-   - This avoids the need for valid Kubernetes configurations in GitHub secrets
-   - The simplified approach ensures consistent behavior across all trigger types
+3. **Final Solution - Dual-Mode Architecture**:
+   - Implemented a robust approach that supports both simulation and real deployments
+   - Used a clear, explicit mode determination step at the beginning of each job
+   - Default mode is simulation for automated workflows and safe testing
+   - Optional real deployment mode available for manual workflow runs
+   - All conditional logic now uses the derived mode value, ensuring consistency
 
-The simulation approach offers:
-- Simplified workflow configuration with no conditional logic needed
+The dual-mode architecture offers:
+- Sophisticated deployment strategy with fallback simulation capabilities
+- Default simulation mode for CI/CD testing without requiring infrastructure
+- Optional real deployment mode for actual production deployments
+- Clear separation of steps based on deployment mode
 - Consistent behavior across all trigger types (push and manual)
-- Reliable CI pipeline that does not require external infrastructure
-- Clear separation between environments using GitHub Environments
-- Safe testing environment that can be upgraded to real Kubernetes later when needed
+- Enhanced portfolio demonstration of CI/CD capabilities
 
 ```python
 # Before

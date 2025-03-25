@@ -4,16 +4,17 @@ This guide explains how to set up the GitHub environments required for the Conti
 
 ## Implementation Status
 
-**Note:** The GitHub Environments and secrets have now been successfully configured. The CD pipeline is fully operational with both real deployment mode and mock mode for testing.
+**Note:** The GitHub Environments have been successfully configured. The CD pipeline is fully operational with dual-mode capability:
 
-The mock mode (default) allows testing the full CI/CD pipeline without requiring actual Kubernetes clusters, while real mode requires properly configured Kubernetes clusters.
+- **Simulation Mode**: Default for CI/CD testing without requiring Kubernetes clusters
+- **Real Deployment Mode**: Optional for actual Kubernetes deployments when needed
 
 ## Required Environments
 
 The CD pipeline uses two environments:
 
-1. **staging** - For deploying to the staging environment
-2. **production** - For deploying to the production environment
+1. **staging** - For deployment to the staging environment
+2. **production** - For deployment to the production environment
 
 ## Step 1: Create Environments in GitHub
 
@@ -29,7 +30,8 @@ The CD pipeline uses two environments:
    - No required reviewers needed for staging
    - No wait timer needed
 
-3. Add the following environment secrets:
+3. For simulation mode, no secrets are required
+4. For real deployment mode, add the following environment secrets:
    - `KUBE_CONFIG_STAGING`: The base64-encoded Kubernetes config for your staging cluster
    - `API_KEY_STAGING`: API key for authentication in the staging environment
 
@@ -40,80 +42,22 @@ The CD pipeline uses two environments:
    - Enable "Required reviewers" and add at least one reviewer
    - Optional: Set a wait timer (e.g., 10 minutes)
 
-3. Add the following environment secrets:
+3. For simulation mode, no secrets are required
+4. For real deployment mode, add the following environment secrets:
    - `KUBE_CONFIG_PRODUCTION`: The base64-encoded Kubernetes config for your production cluster
    - `API_KEY_PRODUCTION`: API key for authentication in the production environment
 
 ## Step 2: Configure Repository Secrets
 
-Some secrets are needed at the repository level:
+Some secrets are needed at the repository level if using external registries:
 
 1. Navigate to "Settings" > "Secrets and variables" > "Actions"
 2. Click on "New repository secret"
-3. Add the following secrets:
+3. Add the following secrets if needed:
    - `REGISTRY_USERNAME`: Username for container registry (if using external registry)
    - `REGISTRY_PASSWORD`: Password for container registry (if using external registry)
 
-## Step 3: Generate Kubernetes Configuration Files
-
-The `KUBE_CONFIG_STAGING` and `KUBE_CONFIG_PRODUCTION` secrets require base64-encoded Kubernetes configuration files:
-
-### Method 1: Using the Automation Script (Recommended)
-
-We provide an automation script that handles both Kubernetes config and API key generation:
-
-```bash
-# Make the script executable if needed
-chmod +x scripts/generate_cd_secrets.sh
-
-# Run the script
-./scripts/generate_cd_secrets.sh
-```
-
-The script will guide you through the process and save all generated secrets in a `.github_environment_setup` directory.
-
-### Method 2: Manual Generation
-
-If you prefer to generate the files manually:
-
-1. Ensure you have `kubectl` installed and configured for your clusters
-2. For staging environment:
-   ```bash
-   # Switch to staging context
-   kubectl config use-context <your-staging-context-name>
-   
-   # Encode the kubeconfig file
-   cat ~/.kube/config | base64 -w 0 > kube_config_staging_base64.txt
-   ```
-
-3. For production environment:
-   ```bash
-   # Switch to production context
-   kubectl config use-context <your-production-context-name>
-   
-   # Encode the kubeconfig file
-   cat ~/.kube/config | base64 -w 0 > kube_config_production_base64.txt
-   ```
-
-4. Use the content of these files as the values for the corresponding secrets
-
-## Step 4: Generate API Keys
-
-If you used the automation script in Step 3, you can skip this step as the API keys have already been generated.
-
-If you're following the manual process, create secure API keys for authentication:
-
-```bash
-# Generate a random API key for staging
-openssl rand -hex 32 > api_key_staging.txt
-
-# Generate a random API key for production
-openssl rand -hex 32 > api_key_production.txt
-```
-
-Use the content of these files as the values for the corresponding secrets.
-
-## Step 5: Configure Branch Protection Rules
+## Step 3: Configure Branch Protection Rules
 
 1. Navigate to "Settings" > "Branches"
 2. Click on "Add rule"
@@ -122,17 +66,50 @@ Use the content of these files as the values for the corresponding secrets.
    - Require status checks to pass before merging
    - Select the CI workflow as a required status check
 
-## Testing the CD Pipeline
+## Using the CD Pipeline
 
-### Manual Trigger
+### Simulation Mode (Default)
 
-1. Navigate to the "Actions" tab in your repository
-2. Select the "Continuous Deployment" workflow
-3. Click on "Run workflow"
-4. Select the environment (staging or production)
-5. Click "Run workflow"
+By default, the CD pipeline runs in simulation mode, which doesn't require any Kubernetes clusters or configuration:
 
-### Automatic Triggers
+1. Automatic trigger:
+   - Push to the `main` branch - This triggers simulation for staging environment
+   - Push to the `main` branch with `[deploy-prod]` in the commit message - This triggers simulation for both staging and production
 
-- Pushing to the `main` branch will automatically deploy to staging
-- To deploy to production automatically, include `[deploy-prod]` in your commit message when pushing to main
+2. Manual trigger:
+   - Go to the Actions tab in your repository
+   - Select the "Continuous Deployment" workflow
+   - Click "Run workflow"
+   - Select the environment (staging or production)
+   - Ensure "real_deployment" is unchecked
+   - Click "Run workflow"
+
+### Real Deployment Mode (Optional)
+
+To use real deployment mode, which performs actual Kubernetes deployments:
+
+1. First, ensure you have configured the necessary secrets:
+   - For staging: `KUBE_CONFIG_STAGING` and `API_KEY_STAGING`
+   - For production: `KUBE_CONFIG_PRODUCTION` and `API_KEY_PRODUCTION`
+
+2. Run the workflow manually:
+   - Go to the Actions tab in your repository
+   - Select the "Continuous Deployment" workflow
+   - Click "Run workflow"
+   - Select the environment (staging or production)
+   - Check the "real_deployment" option
+   - Click "Run workflow"
+
+## Generating Kubernetes Configs for Real Deployment
+
+If you're setting up real deployment mode, you can use the provided script to generate the necessary Kubernetes configurations:
+
+```bash
+# Make the script executable
+chmod +x scripts/generate_cd_secrets.sh
+
+# Run the script
+./scripts/generate_cd_secrets.sh
+```
+
+The script will guide you through the process of generating the required configs and secrets for real Kubernetes deployments.

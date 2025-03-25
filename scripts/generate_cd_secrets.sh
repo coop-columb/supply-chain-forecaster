@@ -1,11 +1,18 @@
 #!/bin/bash
 # Script to generate secrets for GitHub Environments CD setup
-# This script helps generate all the necessary secrets for CD pipeline setup
+# This script helps generate all the necessary secrets for real deployment mode
 
 # Stop on error
 set -e
 
-echo "Generating secrets for GitHub Environments (CD Pipeline)..."
+echo "=== Supply Chain Forecaster: Kubernetes Configuration Generator ==="
+echo ""
+echo "This script will generate Kubernetes configurations and API keys required"
+echo "for the real deployment mode of the CD pipeline."
+echo ""
+echo "Note: By default, the CD pipeline uses simulation mode, which doesn't require"
+echo "these configurations. You only need to run this script if you want to use"
+echo "real deployment mode."
 echo ""
 echo "This script will generate:"
 echo "1. Base64-encoded Kubernetes configs for staging and production"
@@ -14,10 +21,20 @@ echo ""
 echo "You'll need to add these secrets to your GitHub repository environments manually."
 echo ""
 
+# Confirm the user wants to proceed
+read -p "Do you want to continue? (y/n) " -n 1 -r
+echo ""
+if [[ ! $REPLY =~ ^[Yy]$ ]]
+then
+    echo "Operation cancelled."
+    exit 0
+fi
+
 # Create an output directory if it doesn't exist
 mkdir -p .github_environment_setup
 
 # Generate Kubernetes configs for staging
+echo ""
 echo "Generating Kubernetes config for staging environment..."
 echo "Please switch kubectl to your staging context now if needed."
 read -p "Press Enter to continue or Ctrl+C to abort..."
@@ -52,15 +69,11 @@ echo ""
 echo "NEXT STEPS:"
 echo ""
 echo "1. Go to your GitHub repository Settings > Environments"
-echo "2. Create two environments:"
+echo "2. Confirm you have two environments created:"
 echo "   - staging"
 echo "   - production"
 echo ""
-echo "3. Configure protection rules for each environment:"
-echo "   - For staging: No required reviewers needed"
-echo "   - For production: Add required reviewers and optionally set a wait timer"
-echo ""
-echo "4. Add secrets to each environment:"
+echo "3. Add these secrets to each environment:"
 echo "   - For staging:"
 echo "     - KUBE_CONFIG_STAGING: content of kube_config_staging_base64.txt"
 echo "     - API_KEY_STAGING: content of api_key_staging.txt"
@@ -69,21 +82,13 @@ echo "   - For production:"
 echo "     - KUBE_CONFIG_PRODUCTION: content of kube_config_production_base64.txt"
 echo "     - API_KEY_PRODUCTION: content of api_key_production.txt"
 echo ""
-echo "5. (Optional) Add repository-level secrets if using external registry:"
-echo "   - REGISTRY_USERNAME: Your container registry username"
-echo "   - REGISTRY_PASSWORD: Your container registry password"
-echo ""
-echo "After setting up the GitHub Environments and secrets, you can test the CD pipeline by:"
-echo "- Going to the Actions tab in your repository"
-echo "- Selecting the 'Continuous Deployment' workflow"
-echo "- Clicking 'Run workflow'"
-echo "- Selecting 'staging' as the environment"
-echo "- Clicking 'Run workflow'"
-echo ""
-echo "Don't forget to ensure your Kubernetes clusters are properly configured with:"
-echo "- Namespace for the application"
-echo "- RBAC permissions for deployments"
-echo "- Network policies if required"
+echo "4. To use real deployment mode:"
+echo "   - Go to the Actions tab in your repository"
+echo "   - Select the 'Continuous Deployment' workflow"
+echo "   - Click 'Run workflow'"
+echo "   - Select the environment (staging or production)"
+echo "   - Check the 'real_deployment' option"
+echo "   - Click 'Run workflow'"
 echo ""
 echo "IMPORTANT: Delete the .github_environment_setup directory after adding the secrets to GitHub"
 echo "           as these are sensitive credentials."
