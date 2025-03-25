@@ -217,9 +217,17 @@ Based on our analysis, these are the most common performance bottlenecks:
 
 After implementing optimizations, it's important to measure their impact:
 
-1. Run the profiling script again: `python scripts/profile_application.py`
-2. Compare the results before and after optimization
-3. Use the built-in Prometheus metrics to monitor long-term performance trends
+1. Run the profiling script: `python scripts/profile_application.py`
+2. Run the model optimization test script: `python scripts/run_model_optimization_tests.py`
+3. Compare the results before and after optimization
+4. Use the built-in Prometheus metrics to monitor long-term performance trends
+
+The optimization test script generates a report in `docs/performance/optimization_results.png` and `docs/performance/optimization_summary.txt` that quantifies the performance improvements from our optimizations:
+
+- LSTM sequence creation speed improvements
+- ARIMA prediction performance metrics
+- Model caching speedup factors
+- Memory usage improvements
 
 ## Further Resources
 
