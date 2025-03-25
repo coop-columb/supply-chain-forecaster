@@ -79,9 +79,9 @@ def profile_api_endpoints(
             import base64
 
             auth_str = f"{auth['username']}:{auth['password']}"
-            headers["Authorization"] = (
-                f"Basic {base64.b64encode(auth_str.encode()).decode()}"
-            )
+            headers[
+                "Authorization"
+            ] = f"Basic {base64.b64encode(auth_str.encode()).decode()}"
 
     results = {}
 

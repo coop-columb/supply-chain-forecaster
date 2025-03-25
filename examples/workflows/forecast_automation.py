@@ -36,9 +36,9 @@ def retrain_models(client, data_path, model_configs):
     for config in model_configs:
         try:
             # Update model name with timestamp
-            config["model_name"] = (
-                f"{config['base_name']}_{datetime.datetime.now().strftime('%Y%m%d')}"
-            )
+            config[
+                "model_name"
+            ] = f"{config['base_name']}_{datetime.datetime.now().strftime('%Y%m%d')}"
 
             # Train model
             logger.info(f"Training model: {config['model_name']}")

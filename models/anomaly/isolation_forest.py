@@ -184,9 +184,9 @@ class IsolationForestDetector(ModelBase):
         result["is_anomaly"] = predictions == -1
 
         if include_scores:
-            result["anomaly_score"] = (
-                -scores
-            )  # Negate for easier interpretation (higher = more anomalous)
+            result[
+                "anomaly_score"
+            ] = -scores  # Negate for easier interpretation (higher = more anomalous)
 
         # Filter to only anomalies
         anomalies = result[result["is_anomaly"]].copy()
