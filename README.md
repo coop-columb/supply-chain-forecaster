@@ -12,6 +12,11 @@ A production-grade supply chain forecasting system with advanced ML models.
 - Automated CI/CD pipeline
 - Containerized deployment
 - Comprehensive monitoring and observability
+- Performance optimizations:
+  - Model caching and optimization
+  - Dashboard component caching
+  - Data downsampling for visualizations
+  - Intelligent chart rendering
 
 ## Tech Stack
 

@@ -6,6 +6,7 @@ from dash import dash_table, dcc, html
 
 from dashboard.components.charts import create_time_series_chart
 from dashboard.components.data_upload import create_upload_component
+from utils.dashboard_optimization import memoize_component, profile_component
 
 
 def create_data_exploration_layout():
@@ -53,6 +54,8 @@ def create_data_exploration_layout():
     ])
 
 
+@memoize_component()
+@profile_component("summary_stats")
 def create_summary_stats(df):
     """
     Create summary statistics for the dataframe.
@@ -71,6 +74,12 @@ def create_summary_stats(df):
     
     if not numeric_cols:
         return html.Div("No numeric columns found in the data.")
+    
+    # Calculate summary statistics - limit to at most 15 columns for performance
+    if len(numeric_cols) > 15:
+        # Select columns based on variance (more interesting columns first)
+        variances = df[numeric_cols].var().sort_values(ascending=False)
+        numeric_cols = variances.index[:15].tolist()
     
     # Calculate summary statistics
     summary = df[numeric_cols].describe().round(2).reset_index()
@@ -91,11 +100,14 @@ def create_summary_stats(df):
                     'backgroundColor': 'rgb(230, 230, 230)',
                     'fontWeight': 'bold'
                 },
+                page_size=10,  # Paginate for better performance with large tables
             ),
         ]),
     ])
 
 
+@memoize_component()
+@profile_component("correlation_heatmap")
 def create_correlation_heatmap(df):
     """
     Create correlation heatmap for numeric columns.
@@ -114,6 +126,12 @@ def create_correlation_heatmap(df):
     
     if len(numeric_cols) < 2:
         return html.Div("At least two numeric columns are required for correlation analysis.")
+    
+    # Limit to at most 20 columns for performance and readability
+    if len(numeric_cols) > 20:
+        # Select columns based on variance (more interesting columns first)
+        variances = df[numeric_cols].var().sort_values(ascending=False)
+        numeric_cols = variances.index[:20].tolist()
     
     # Calculate correlation matrix
     corr_matrix = df[numeric_cols].corr().round(2)
@@ -136,6 +154,10 @@ def create_correlation_heatmap(df):
         yaxis_title="",
         margin=dict(l=40, r=40, t=60, b=40),
     )
+    
+    # Optimize the figure for faster rendering
+    from utils.dashboard_optimization import optimize_plotly_figure
+    fig = optimize_plotly_figure(fig)
     
     return dbc.Card([
         dbc.CardHeader(html.H5("Correlation Analysis")),

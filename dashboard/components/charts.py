@@ -7,7 +7,17 @@ import plotly.express as px
 import plotly.graph_objs as go
 from dash import dcc, html
 
+from config import config
+from utils.dashboard_optimization import (
+    downsample_timeseries,
+    memoize_component,
+    optimize_plotly_figure,
+    profile_component,
+)
 
+
+@memoize_component()
+@profile_component("time_series_chart")
 def create_time_series_chart(df, x_column, y_columns, title, id_prefix):
     """
     Create a time series chart.
@@ -31,6 +41,11 @@ def create_time_series_chart(df, x_column, y_columns, title, id_prefix):
     if not valid_y_columns:
         return html.Div("No valid series to display")
     
+    # Downsample the dataframe if it's too large
+    max_points = getattr(config, "DASHBOARD_MAX_POINTS", 500)
+    if len(df) > max_points:
+        df = downsample_timeseries(df, x_column, valid_y_columns, max_points)
+    
     # Create figure
     fig = go.Figure()
     
@@ -50,6 +65,9 @@ def create_time_series_chart(df, x_column, y_columns, title, id_prefix):
         margin=dict(l=40, r=40, t=60, b=40),
     )
     
+    # Optimize the figure for faster rendering
+    fig = optimize_plotly_figure(fig)
+    
     return dbc.Card(
         dbc.CardBody([
             html.H5(title, className="card-title"),
@@ -62,6 +80,8 @@ def create_time_series_chart(df, x_column, y_columns, title, id_prefix):
     )
 
 
+@memoize_component()
+@profile_component("forecast_chart")
 def create_forecast_chart(historical_df, forecast_df, date_column, value_column, 
                         lower_bound=None, upper_bound=None, title="Forecast", id_prefix="forecast"):
     """
@@ -82,6 +102,24 @@ def create_forecast_chart(historical_df, forecast_df, date_column, value_column,
     """
     if historical_df is None or forecast_df is None:
         return html.Div("No data to display")
+    
+    # Downsample dataframes if they're too large
+    max_points = getattr(config, "DASHBOARD_MAX_POINTS", 500)
+    
+    # Reserve space for forecast points - allocate 70% to historical, 30% to forecast
+    hist_max_points = int(max_points * 0.7)
+    forecast_max_points = max_points - hist_max_points
+    
+    if len(historical_df) > hist_max_points:
+        historical_df = downsample_timeseries(historical_df, date_column, value_column, hist_max_points)
+    
+    if len(forecast_df) > forecast_max_points:
+        columns_to_include = [value_column]
+        if lower_bound is not None:
+            columns_to_include.append(lower_bound)
+        if upper_bound is not None:
+            columns_to_include.append(upper_bound)
+        forecast_df = downsample_timeseries(forecast_df, date_column, columns_to_include, forecast_max_points)
     
     # Create figure
     fig = go.Figure()
@@ -133,6 +171,9 @@ def create_forecast_chart(historical_df, forecast_df, date_column, value_column,
         margin=dict(l=40, r=40, t=60, b=40),
     )
     
+    # Optimize the figure for faster rendering
+    fig = optimize_plotly_figure(fig)
+    
     return dbc.Card(
         dbc.CardBody([
             html.H5(title, className="card-title"),
@@ -145,6 +186,8 @@ def create_forecast_chart(historical_df, forecast_df, date_column, value_column,
     )
 
 
+@memoize_component()
+@profile_component("anomaly_chart")
 def create_anomaly_chart(df, date_column, value_column, anomaly_column, score_column=None, 
                         title="Anomaly Detection", id_prefix="anomaly"):
     """
@@ -165,11 +208,26 @@ def create_anomaly_chart(df, date_column, value_column, anomaly_column, score_co
     if df is None or date_column not in df.columns or value_column not in df.columns:
         return html.Div("No data to display")
     
+    # Downsample the dataframe if it's too large, but preserve anomalies
+    max_points = getattr(config, "DASHBOARD_MAX_POINTS", 500)
+    
+    # Split normal and anomaly points
+    normal_df = df[~df[anomaly_column]]
+    anomaly_df = df[df[anomaly_column]]
+    
+    # Only downsample the normal points if there are too many total points
+    if len(df) > max_points:
+        # Reserve space for anomalies (they're important and shouldn't be downsampled)
+        normal_max_points = max(5, max_points - len(anomaly_df))
+        
+        if len(normal_df) > normal_max_points:
+            columns_to_include = [value_column]
+            normal_df = downsample_timeseries(normal_df, date_column, columns_to_include, normal_max_points)
+    
     # Create figure
     fig = go.Figure()
     
     # Add normal points
-    normal_df = df[~df[anomaly_column]]
     fig.add_trace(go.Scatter(
         x=normal_df[date_column],
         y=normal_df[value_column],
@@ -180,8 +238,6 @@ def create_anomaly_chart(df, date_column, value_column, anomaly_column, score_co
     ))
     
     # Add anomalies
-    anomaly_df = df[df[anomaly_column]]
-    
     if not anomaly_df.empty:
         # Use anomaly scores for marker size if available
         marker_size = 10
@@ -218,6 +274,9 @@ def create_anomaly_chart(df, date_column, value_column, anomaly_column, score_co
         margin=dict(l=40, r=40, t=60, b=40),
     )
     
+    # Optimize the figure for faster rendering
+    fig = optimize_plotly_figure(fig)
+    
     return dbc.Card(
         dbc.CardBody([
             html.H5(title, className="card-title"),
@@ -230,6 +289,8 @@ def create_anomaly_chart(df, date_column, value_column, anomaly_column, score_co
     )
 
 
+@memoize_component()
+@profile_component("feature_importance_chart")
 def create_feature_importance_chart(importance_df, feature_col, importance_col, 
                                   title="Feature Importance", id_prefix="importance"):
     """
@@ -248,8 +309,17 @@ def create_feature_importance_chart(importance_df, feature_col, importance_col,
     if importance_df is None or feature_col not in importance_df.columns or importance_col not in importance_df.columns:
         return html.Div("No data to display")
     
-    # Sort by importance
-    df_sorted = importance_df.sort_values(importance_col, ascending=True)
+    # Sort by importance and limit to top features if there are too many
+    df_sorted = importance_df.sort_values(importance_col, ascending=False)
+    
+    # If we have too many features, just show the top 20
+    max_features = 20
+    if len(df_sorted) > max_features:
+        df_sorted = df_sorted.head(max_features)
+        # Re-sort for display (ascending for horizontal bar chart)
+        df_sorted = df_sorted.sort_values(importance_col, ascending=True)
+    else:
+        df_sorted = df_sorted.sort_values(importance_col, ascending=True)
     
     # Create horizontal bar chart
     fig = px.bar(
@@ -265,6 +335,9 @@ def create_feature_importance_chart(importance_df, feature_col, importance_col,
         yaxis_title='Feature',
         margin=dict(l=40, r=40, t=60, b=40),
     )
+    
+    # Optimize the figure for faster rendering
+    fig = optimize_plotly_figure(fig)
     
     return dbc.Card(
         dbc.CardBody([

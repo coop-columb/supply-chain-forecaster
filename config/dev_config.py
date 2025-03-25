@@ -35,3 +35,8 @@ class DevConfig(BaseConfig):
     MODEL_CACHE_SIZE = 10
     ENABLE_RESPONSE_CACHING = True
     RESPONSE_CACHE_TTL_SECONDS = 300  # 5 minutes
+    
+    # Enable dashboard optimization in development for testing
+    ENABLE_DASHBOARD_CACHING = True
+    DASHBOARD_CACHE_TTL_SECONDS = 300  # 5 minutes
+    DASHBOARD_MAX_POINTS = 500

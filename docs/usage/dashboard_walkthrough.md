@@ -5,6 +5,17 @@ This guide provides a comprehensive walkthrough of the Supply Chain Forecaster d
 ![Dashboard Home Page](../screenshots/dashboard/home/home-dashboard-overview.png)
 *The Supply Chain Forecaster dashboard provides an intuitive interface for forecasting and anomaly detection.*
 
+## Performance Optimization
+
+The dashboard has been optimized for performance, particularly when working with large datasets:
+
+- **Component Caching**: Dashboard components are cached to reduce rendering time on repeated views
+- **Data Downsampling**: Large time series datasets are intelligently downsampled for faster visualization
+- **Chart Optimization**: Charts are optimized to render efficiently, even with complex visualizations
+- **Smart Pagination**: Data tables use pagination to avoid loading too many rows at once
+
+These optimizations help maintain responsive performance even when working with large supply chain datasets.
+
 ## Dashboard Overview
 
 The dashboard is organized into five main sections, each accessible from the navigation bar:

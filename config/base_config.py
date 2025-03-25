@@ -86,6 +86,11 @@ class BaseConfig:
     MODEL_CACHE_SIZE = int(os.getenv("MODEL_CACHE_SIZE", "10"))
     ENABLE_RESPONSE_CACHING = os.getenv("ENABLE_RESPONSE_CACHING", "False").lower() == "true"
     RESPONSE_CACHE_TTL_SECONDS = int(os.getenv("RESPONSE_CACHE_TTL_SECONDS", "3600"))  # 1 hour
+    
+    # Dashboard optimization configuration
+    ENABLE_DASHBOARD_CACHING = os.getenv("ENABLE_DASHBOARD_CACHING", "False").lower() == "true"
+    DASHBOARD_CACHE_TTL_SECONDS = int(os.getenv("DASHBOARD_CACHE_TTL_SECONDS", "600"))  # 10 minutes
+    DASHBOARD_MAX_POINTS = int(os.getenv("DASHBOARD_MAX_POINTS", "500"))  # Max data points in charts
 
     def as_dict(self) -> Dict[str, Union[str, int, bool, List[int]]]:
         """Return configuration as a dictionary."""

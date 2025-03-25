@@ -13,6 +13,7 @@ from flask import Flask, request, Response
 from config import config
 from dashboard.layouts import create_layout
 from utils import get_logger, get_request_id, log_request, reset_request_id, set_request_id, setup_logger
+from utils.dashboard_optimization import clear_component_cache, get_component_cache_stats
 
 logger = get_logger(__name__)
 
@@ -75,6 +76,17 @@ def configure_flask_server() -> Flask:
     @server.route("/health/liveness")
     def liveness_check():
         return {"status": "alive", "timestamp": time.time()}
+    
+    # Add dashboard cache management endpoints
+    @server.route("/dashboard/cache/clear", methods=["POST"])
+    def clear_cache():
+        clear_component_cache()
+        return {"status": "ok", "message": "Dashboard component cache cleared", "timestamp": time.time()}
+    
+    @server.route("/dashboard/cache/stats")
+    def cache_stats():
+        stats = get_component_cache_stats()
+        return {"status": "ok", "cache_stats": stats, "timestamp": time.time()}
     
     # Add metrics endpoint if in production
     if is_production and hasattr(config, "PROMETHEUS_METRICS") and config.PROMETHEUS_METRICS:

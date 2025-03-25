@@ -75,3 +75,8 @@ class ProdConfig(BaseConfig):
     MODEL_CACHE_SIZE = 20
     ENABLE_RESPONSE_CACHING = True
     RESPONSE_CACHE_TTL_SECONDS = 3600  # 1 hour
+    
+    # Dashboard optimization is enabled in production for better performance
+    ENABLE_DASHBOARD_CACHING = True
+    DASHBOARD_CACHE_TTL_SECONDS = 3600  # 1 hour
+    DASHBOARD_MAX_POINTS = 1000  # Higher for production to maintain more detail

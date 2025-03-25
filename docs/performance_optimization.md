@@ -82,6 +82,51 @@ The ARIMA model's parameter selection has been optimized to be faster and more e
 3. Early stopping based on information criterion
 4. Development mode optimizations for faster experimentation
 
+### Dashboard Component Optimization
+
+The dashboard components have been optimized to improve loading and rendering performance:
+
+1. **Component Caching**: Dashboard components are cached with expiry times to avoid redundant rendering.
+
+```python
+@memoize_component()
+@profile_component("time_series_chart")
+def create_time_series_chart(df, x_column, y_columns, title, id_prefix):
+    # Chart creation logic
+```
+
+2. **Data Downsampling**: Time series data is intelligently downsampled based on chart size.
+
+```python
+# Downsample large datasets for better performance
+if len(df) > max_points:
+    df = downsample_timeseries(df, date_column, value_columns, max_points)
+```
+
+3. **Chart Optimization**: Plotly charts are optimized for faster rendering.
+
+```python
+# Optimize the figure for faster rendering
+fig = optimize_plotly_figure(fig)
+```
+
+4. **Component Profiling**: All critical components include performance profiling.
+
+```python
+# Profile component rendering time
+with ComponentTimer("correlation_heatmap"):
+    # Component rendering logic
+```
+
+5. **Cache Management Endpoints**: REST endpoints for clearing and inspecting caches.
+
+```python
+@server.route("/dashboard/cache/clear", methods=["POST"])
+def clear_cache():
+    clear_component_cache()
+    return {"status": "ok", "message": "Dashboard component cache cleared"}
+```
+
 ### Profiling Instrumentation
 
 All critical model operations now include profiling instrumentation to measure performance:
@@ -99,6 +144,9 @@ Caching behavior can be configured through environment variables or config files
 - `MODEL_CACHE_SIZE`: Maximum number of models to cache
 - `ENABLE_RESPONSE_CACHING`: Enable/disable prediction result caching
 - `RESPONSE_CACHE_TTL_SECONDS`: Time-to-live for cached predictions
+- `ENABLE_DASHBOARD_CACHING`: Enable/disable dashboard component caching
+- `DASHBOARD_CACHE_TTL_SECONDS`: Time-to-live for cached dashboard components
+- `DASHBOARD_MAX_POINTS`: Maximum data points to display in charts
 
 ## Common Performance Bottlenecks
 
@@ -177,18 +225,80 @@ Based on our analysis, these are the most common performance bottlenecks:
 
 ### Dashboard Optimization
 
-1. **Data Downsampling**:
+1. **Component Caching with TTL**:
    ```python
-   # Downsample large datasets for visualization
-   def downsample_for_chart(df, max_points=1000):
-       if len(df) > max_points:
-           return df.iloc[::len(df)//max_points]
-       return df
+   # Cache dashboard components with time-to-live
+   @memoize_component(ttl=datetime.timedelta(minutes=10))
+   def create_summary_stats(df):
+       # Component creation logic that's expensive
+       return summary_component
    ```
 
-2. **Lazy Loading**:
+2. **Intelligent Data Downsampling**:
    ```python
-   # Load components only when needed
+   # Downsample time series data based on chart needs and date range
+   def downsample_timeseries(df, date_column, value_columns, max_points=500):
+       # If already small enough, return as is
+       if len(df) <= max_points:
+           return df
+       
+       # Calculate appropriate frequency based on date range
+       date_range = df[date_column].max() - df[date_column].min()
+       days = date_range.total_seconds() / (24 * 3600)
+       
+       # Choose frequency (hourly, daily, weekly, monthly)
+       if days <= 2:  # Short range: hours
+           freq = f"{max(1, int(48 / max_points))}H"
+       elif days <= 60:  # Medium range: days
+           freq = f"{max(1, int(days / max_points))}D"
+       else:  # Long range: weeks or months
+           freq = f"{max(1, int(days / (7 * max_points)))}W"
+       
+       # Resample and return
+       return df.set_index(date_column).resample(freq).mean().reset_index()
+   ```
+
+3. **Chart Rendering Optimization**:
+   ```python
+   # Optimize Plotly figures for better performance
+   def optimize_plotly_figure(fig):
+       # Reduce point density for large datasets
+       for trace in fig.data:
+           if hasattr(trace, "x") and len(trace.x) > 1000:
+               indices = np.linspace(0, len(trace.x) - 1, 1000, dtype=int)
+               trace.x = [trace.x[i] for i in indices]
+               trace.y = [trace.y[i] for i in indices]
+       
+       # Optimize layout settings
+       fig.update_layout(
+           transition_duration=0,  # Disable animations
+           modebar=dict(remove=['sendDataToCloud', 'lasso2d', 'select2d'])  # Simplify UI
+       )
+       
+       return fig
+   ```
+
+4. **Component Performance Profiling**:
+   ```python
+   # Profile component rendering time
+   @profile_component("correlation_heatmap")
+   def create_correlation_heatmap(df):
+       # Start timing
+       start_time = time.time()
+       
+       # Create the component
+       result = create_heatmap_component(df)
+       
+       # Log timing information
+       duration_ms = (time.time() - start_time) * 1000
+       logger.debug(f"Rendered correlation heatmap in {duration_ms:.2f}ms")
+       
+       return result
+   ```
+
+5. **Lazy Loading and Smart Pagination**:
+   ```python
+   # Load components only when needed and paginate results
    @app.callback(
        Output("component-container", "children"),
        [Input("tab", "value")]
@@ -197,19 +307,13 @@ Based on our analysis, these are the most common performance bottlenecks:
        if tab == "tab1":
            return create_tab1_content()
        return []
-   ```
-
-3. **Client-Side Callbacks**:
-   ```javascript
-   // Use client-side callbacks for simple UI interactions
-   app.clientside_callback(
-       """
-       function(value) {
-           return value;
-       }
-       """,
-       Output("output-id", "children"),
-       Input("input-id", "value"),
+   
+   # Use pagination for data tables
+   dash_table.DataTable(
+       data=df.to_dict('records'),
+       columns=[{'name': i, 'id': i} for i in df.columns],
+       page_size=10,  # Show only 10 rows at a time
+       style_table={'overflowX': 'auto'},
    )
    ```
 
