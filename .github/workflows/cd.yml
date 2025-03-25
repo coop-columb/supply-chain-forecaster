@@ -1,0 +1,225 @@
+name: Continuous Deployment
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      version:
+        description: 'Version tag to deploy (defaults to "latest")'
+        required: false
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  API_IMAGE_NAME: ${{ github.repository }}-api
+  DASHBOARD_IMAGE_NAME: ${{ github.repository }}-dashboard
+
+jobs:
+  build-and-push:
+    name: Build and Push Docker Images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
+    outputs:
+      api_image: ${{ steps.image-info.outputs.api_image }}
+      dashboard_image: ${{ steps.image-info.outputs.dashboard_image }}
+      version: ${{ steps.image-info.outputs.version }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Generate metadata for Docker images
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            ${{ env.REGISTRY }}/${{ env.API_IMAGE_NAME }}
+            ${{ env.REGISTRY }}/${{ env.DASHBOARD_IMAGE_NAME }}
+          tags: |
+            type=sha,format=short
+            type=ref,event=branch
+            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'main') }}
+      
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+          else
+            echo "VERSION=sha-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          fi
+      
+      - name: Build and push API image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          target: api-production
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.API_IMAGE_NAME }}:${{ env.VERSION }},${{ env.REGISTRY }}/${{ env.API_IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      
+      - name: Build and push Dashboard image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          target: dashboard-production
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.DASHBOARD_IMAGE_NAME }}:${{ env.VERSION }},${{ env.REGISTRY }}/${{ env.DASHBOARD_IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      
+      - name: Output image info for later jobs
+        id: image-info
+        run: |
+          echo "api_image=${{ env.REGISTRY }}/${{ env.API_IMAGE_NAME }}:${{ env.VERSION }}" >> $GITHUB_OUTPUT
+          echo "dashboard_image=${{ env.REGISTRY }}/${{ env.DASHBOARD_IMAGE_NAME }}:${{ env.VERSION }}" >> $GITHUB_OUTPUT
+          echo "version=${{ env.VERSION }}" >> $GITHUB_OUTPUT
+
+  deploy-staging:
+    name: Deploy to Staging
+    needs: build-and-push
+    if: success() && (github.event_name != 'workflow_dispatch' || github.event.inputs.environment == 'staging')
+    runs-on: ubuntu-latest
+    environment: staging
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+      
+      - name: Configure Kubernetes context
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBE_CONFIG_STAGING }}
+      
+      - name: Update Kubernetes manifests with new image tags
+        run: |
+          sed -i "s|image: .*supply-chain-forecaster-api:.*|image: ${{ needs.build-and-push.outputs.api_image }}|g" k8s/api-deployment.yaml
+          sed -i "s|image: .*supply-chain-forecaster-dashboard:.*|image: ${{ needs.build-and-push.outputs.dashboard_image }}|g" k8s/dashboard-deployment.yaml
+      
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl apply -f k8s/api-deployment.yaml
+          kubectl apply -f k8s/dashboard-deployment.yaml
+          kubectl apply -f k8s/ingress.yaml
+      
+      - name: Verify deployment
+        run: |
+          kubectl rollout status deployment/supply-chain-api -n default
+          kubectl rollout status deployment/supply-chain-dashboard -n default
+      
+      - name: Run deployment verification tests
+        run: |
+          echo "Running verification tests against staging environment"
+          # Set testing environment variables
+          export API_BASE_URL="https://api-staging.supply-chain-forecaster.example.com"
+          export DASHBOARD_BASE_URL="https://dashboard-staging.supply-chain-forecaster.example.com"
+          export DEPLOYMENT_ENV="staging"
+          export API_KEY="${{ secrets.API_KEY_STAGING }}"
+          
+          # Install test dependencies
+          pip install pytest requests
+          
+          # Run deployment verification tests
+          pytest tests/e2e/test_deployment_verification.py -v
+      
+      - name: Create deployment record
+        run: |
+          echo "Deployment to staging completed at $(date)"
+          echo "Version: ${{ needs.build-and-push.outputs.version }}"
+          echo "API Image: ${{ needs.build-and-push.outputs.api_image }}"
+          echo "Dashboard Image: ${{ needs.build-and-push.outputs.dashboard_image }}"
+
+  deploy-production:
+    name: Deploy to Production
+    needs: [build-and-push, deploy-staging]
+    if: |
+      success() && 
+      (
+        (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production') ||
+        (github.ref == 'refs/heads/main' && github.event_name == 'push' && contains(github.event.commits[0].message, '[deploy-prod]'))
+      )
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://supply-chain-forecaster.example.com
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+      
+      - name: Configure Kubernetes context
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBE_CONFIG_PRODUCTION }}
+      
+      - name: Update Kubernetes manifests with new image tags
+        run: |
+          sed -i "s|image: .*supply-chain-forecaster-api:.*|image: ${{ needs.build-and-push.outputs.api_image }}|g" k8s/api-deployment.yaml
+          sed -i "s|image: .*supply-chain-forecaster-dashboard:.*|image: ${{ needs.build-and-push.outputs.dashboard_image }}|g" k8s/dashboard-deployment.yaml
+      
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl apply -f k8s/api-deployment.yaml
+          kubectl apply -f k8s/dashboard-deployment.yaml
+          kubectl apply -f k8s/ingress.yaml
+      
+      - name: Verify deployment
+        run: |
+          kubectl rollout status deployment/supply-chain-api -n default
+          kubectl rollout status deployment/supply-chain-dashboard -n default
+      
+      - name: Run deployment verification tests
+        run: |
+          echo "Running verification tests against production environment"
+          # Set testing environment variables
+          export API_BASE_URL="https://api.supply-chain-forecaster.example.com"
+          export DASHBOARD_BASE_URL="https://supply-chain-forecaster.example.com"
+          export DEPLOYMENT_ENV="production"
+          export API_KEY="${{ secrets.API_KEY_PRODUCTION }}"
+          
+          # Install test dependencies
+          pip install pytest requests
+          
+          # Run deployment verification tests with production-safe flags
+          pytest tests/e2e/test_deployment_verification.py -v
+      
+      - name: Create deployment record
+        run: |
+          echo "Deployment to production completed at $(date)"
+          echo "Version: ${{ needs.build-and-push.outputs.version }}"
+          echo "API Image: ${{ needs.build-and-push.outputs.api_image }}"
+          echo "Dashboard Image: ${{ needs.build-and-push.outputs.dashboard_image }}"
