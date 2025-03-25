@@ -240,7 +240,7 @@ jobs:
       
       # Archive deployment logs
       - name: Archive deployment logs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: staging-deployment-logs
           path: deployment-logs/
@@ -392,7 +392,7 @@ jobs:
       
       # Archive deployment logs
       - name: Archive deployment logs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: production-deployment-logs
           path: deployment-logs/
