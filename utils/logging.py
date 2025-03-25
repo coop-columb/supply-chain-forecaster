@@ -46,31 +46,31 @@ class InterceptHandler(logging.Handler):
 class JSONSink:
     """
     Custom JSON sink for loguru that formats logs as JSON.
-    
+
     This sink formats log records as JSON for better parsing by log
     management systems like ELK, Loki, or CloudWatch.
     """
-    
+
     def __init__(self, sink, request_id_provider=None):
         """
         Initialize the JSON sink.
-        
+
         Args:
             sink: The sink to write logs to (file or stream)
             request_id_provider: Function that returns the current request ID
         """
         self.sink = sink
         self.request_id_provider = request_id_provider
-    
+
     def __call__(self, message):
         """
         Format and write the log message as JSON.
-        
+
         Args:
             message: The loguru message object
         """
         record = message.record
-        
+
         # Add request ID if available
         request_id = None
         if self.request_id_provider:
@@ -78,7 +78,7 @@ class JSONSink:
                 request_id = self.request_id_provider()
             except Exception:
                 pass
-        
+
         # Create the JSON log entry
         log_entry = {
             "timestamp": record["time"].isoformat(),
@@ -91,11 +91,11 @@ class JSONSink:
             "process": record["process"].id,
             "thread": record["thread"].id,
         }
-        
+
         # Add request ID if available
         if request_id:
             log_entry["request_id"] = request_id
-        
+
         # Add exception info if available
         if record["exception"]:
             log_entry["exception"] = {
@@ -103,11 +103,11 @@ class JSONSink:
                 "value": str(record["exception"].value),
                 "traceback": record["exception"].traceback,
             }
-        
+
         # Add extra fields
         for key, value in record["extra"].items():
             log_entry[key] = value
-        
+
         # Write the JSON log entry
         self.sink.write(json.dumps(log_entry) + "\n")
         self.sink.flush()
@@ -120,7 +120,7 @@ _request_id = None
 def get_request_id() -> str:
     """
     Get the current request ID or generate a new one.
-    
+
     Returns:
         The current request ID string.
     """
@@ -133,7 +133,7 @@ def get_request_id() -> str:
 def set_request_id(request_id: str) -> None:
     """
     Set the current request ID for distributed tracing.
-    
+
     Args:
         request_id: The request ID to set.
     """
@@ -168,14 +168,14 @@ def setup_logger(
     """
     # Remove any existing handlers
     logger.remove()
-    
+
     # Add application metadata to all logs
     logger = logger.bind(
         application="supply-chain-forecaster",
         environment=env,
         version="0.1.0",
     )
-    
+
     # Configure stderr handler
     if json_format:
         # Use JSON format for stderr in production
@@ -201,7 +201,7 @@ def setup_logger(
     if log_file:
         log_path = Path(log_file)
         log_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         if json_format:
             # JSON format for log files in production
             with open(log_path, "a") as log_file_handle:
@@ -258,10 +258,17 @@ def get_logger(name: str = None):
     return logger
 
 
-def log_request(request_id: str, method: str, url: str, status_code: int, duration_ms: float, user_id: Optional[str] = None) -> None:
+def log_request(
+    request_id: str,
+    method: str,
+    url: str,
+    status_code: int,
+    duration_ms: float,
+    user_id: Optional[str] = None,
+) -> None:
     """
     Log an API request with performance metrics.
-    
+
     Args:
         request_id: The unique ID for the request
         method: HTTP method (GET, POST, etc.)
@@ -277,20 +284,26 @@ def log_request(request_id: str, method: str, url: str, status_code: int, durati
         "status_code": status_code,
         "duration_ms": duration_ms,
     }
-    
+
     if user_id:
         log_data["user_id"] = user_id
-    
+
     get_logger("api.request").info(
         f"Request {method} {url} completed with status {status_code} in {duration_ms:.2f}ms",
-        **log_data
+        **log_data,
     )
 
 
-def log_model_prediction(model_name: str, input_shape: tuple, output_shape: tuple, duration_ms: float, request_id: Optional[str] = None) -> None:
+def log_model_prediction(
+    model_name: str,
+    input_shape: tuple,
+    output_shape: tuple,
+    duration_ms: float,
+    request_id: Optional[str] = None,
+) -> None:
     """
     Log a model prediction event with performance metrics.
-    
+
     Args:
         model_name: The name of the model used
         input_shape: Shape of the input data
@@ -304,11 +317,10 @@ def log_model_prediction(model_name: str, input_shape: tuple, output_shape: tupl
         "output_shape": str(output_shape),
         "duration_ms": duration_ms,
     }
-    
+
     if request_id:
         log_data["request_id"] = request_id
-    
+
     get_logger("models.prediction").info(
-        f"Model {model_name} prediction completed in {duration_ms:.2f}ms",
-        **log_data
+        f"Model {model_name} prediction completed in {duration_ms:.2f}ms", **log_data
     )

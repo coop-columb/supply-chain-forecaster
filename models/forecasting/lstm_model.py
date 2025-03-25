@@ -39,7 +39,7 @@ class LSTMModel(ModelBase):
     ):
         """
         Initialize the LSTM model.
-        
+
         Args:
             name: Name of the model.
             units: List of LSTM layer sizes.
@@ -64,7 +64,7 @@ class LSTMModel(ModelBase):
                 "TensorFlow not installed. Please install with pip install tensorflow"
             )
             raise
-        
+
         super().__init__(
             name=name,
             units=units,
@@ -82,10 +82,10 @@ class LSTMModel(ModelBase):
             sequence_length=sequence_length,
             **kwargs,
         )
-        
+
         # Set random seed for reproducibility
         tf.random.set_seed(42)
-        
+
         # Store preprocessing parameters
         self.scaler = None
 
@@ -94,36 +94,36 @@ class LSTMModel(ModelBase):
     ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
         """
         Create sequences for LSTM input.
-        
+
         Args:
             X: Feature dataframe.
             y: Target series (optional).
-        
+
         Returns:
             Tuple of input sequences and target sequences (if y is provided).
         """
         seq_length = self.params["sequence_length"]
-        
+
         # Convert to numpy arrays
         X_array = X.values
-        
+
         n_samples = len(X_array)
         n_features = X_array.shape[1]
-        
+
         if n_samples <= seq_length:
             # Handle edge case with insufficient samples
             if y is not None:
                 return np.array([]), np.array([])
             else:
                 return np.array([]), None
-        
+
         # Create sequences using numpy operations (much faster than loop)
         indices = np.arange(n_samples - seq_length + 1)
         X_sequences = np.zeros((len(indices), seq_length, n_features))
-        
+
         for i, start_idx in enumerate(indices):
-            X_sequences[i] = X_array[start_idx:start_idx + seq_length]
-        
+            X_sequences[i] = X_array[start_idx : start_idx + seq_length]
+
         # Create target sequences if y is provided
         if y is not None:
             y_array = y.values
@@ -135,10 +135,10 @@ class LSTMModel(ModelBase):
     def _build_model(self, input_shape: Tuple[int, int]) -> "tf.keras.Model":
         """
         Build the LSTM model architecture.
-        
+
         Args:
             input_shape: Shape of the input data (sequence_length, n_features).
-        
+
         Returns:
             Compiled LSTM model.
         """
@@ -146,40 +146,44 @@ class LSTMModel(ModelBase):
         from tensorflow.keras.callbacks import EarlyStopping
         from tensorflow.keras.layers import LSTM, Dense, Dropout
         from tensorflow.keras.models import Sequential
-        
+
         model = Sequential()
-        
+
         # First LSTM layer
-        model.add(LSTM(
-            units=self.params["units"][0],
-            activation=self.params["activation"],
-            dropout=self.params["dropout"],
-            recurrent_dropout=self.params["recurrent_dropout"],
-            return_sequences=len(self.params["units"]) > 1,
-            input_shape=input_shape,
-        ))
-        
-        # Additional LSTM layers
-        for i, units in enumerate(self.params["units"][1:]):
-            return_sequences = i < len(self.params["units"]) - 2
-            model.add(LSTM(
-                units=units,
+        model.add(
+            LSTM(
+                units=self.params["units"][0],
                 activation=self.params["activation"],
                 dropout=self.params["dropout"],
                 recurrent_dropout=self.params["recurrent_dropout"],
-                return_sequences=return_sequences,
-            ))
-        
+                return_sequences=len(self.params["units"]) > 1,
+                input_shape=input_shape,
+            )
+        )
+
+        # Additional LSTM layers
+        for i, units in enumerate(self.params["units"][1:]):
+            return_sequences = i < len(self.params["units"]) - 2
+            model.add(
+                LSTM(
+                    units=units,
+                    activation=self.params["activation"],
+                    dropout=self.params["dropout"],
+                    recurrent_dropout=self.params["recurrent_dropout"],
+                    return_sequences=return_sequences,
+                )
+            )
+
         # Output layer
         model.add(Dense(1))
-        
+
         # Compile model
         model.compile(
             optimizer=self.params["optimizer"],
             loss=self.params["loss"],
             metrics=self.params["metrics"],
         )
-        
+
         return model
 
     def fit(
@@ -191,13 +195,13 @@ class LSTMModel(ModelBase):
     ) -> "LSTMModel":
         """
         Fit the LSTM model to the data.
-        
+
         Args:
             X: Feature dataframe.
             y: Target series.
             scale_data: Whether to scale the data.
             **kwargs: Additional fitting parameters.
-        
+
         Returns:
             Self for method chaining.
         """
@@ -211,50 +215,52 @@ class LSTMModel(ModelBase):
                 "Please install with pip install tensorflow scikit-learn"
             )
             raise
-        
+
         logger.info(f"Fitting LSTM model {self.name}")
-        
+
         # Store feature names and target name
         self.features = list(X.columns)
         self.target = y.name if y.name else "target"
-        
+
         # Scale data if requested
         X_scaled = X.copy()
         y_scaled = y.copy()
-        
+
         if scale_data:
             self.scaler_X = StandardScaler()
             self.scaler_y = StandardScaler()
-            
+
             X_scaled = pd.DataFrame(
                 self.scaler_X.fit_transform(X),
                 columns=X.columns,
                 index=X.index,
             )
-            
+
             y_scaled = pd.Series(
                 self.scaler_y.fit_transform(y.values.reshape(-1, 1)).flatten(),
                 index=y.index,
                 name=y.name,
             )
-        
+
         # Create sequences
         X_seq, y_seq = self._create_sequences(X_scaled, y_scaled)
-        
+
         if len(X_seq) == 0:
             raise ValueError(
                 f"Not enough data to create sequences with sequence_length={self.params['sequence_length']}"
             )
-        
-        logger.info(f"Created {len(X_seq)} sequences of length {self.params['sequence_length']}")
-        
+
+        logger.info(
+            f"Created {len(X_seq)} sequences of length {self.params['sequence_length']}"
+        )
+
         # Build model
         input_shape = (X_seq.shape[1], X_seq.shape[2])
         model = self._build_model(input_shape)
-        
+
         # Create callbacks
         callbacks = []
-        
+
         if self.params["early_stopping"]:
             early_stopping = EarlyStopping(
                 monitor="val_loss",
@@ -262,10 +268,11 @@ class LSTMModel(ModelBase):
                 restore_best_weights=True,
             )
             callbacks.append(early_stopping)
-        
+
         # Train model
         history = model.fit(
-            X_seq, y_seq,
+            X_seq,
+            y_seq,
             batch_size=self.params["batch_size"],
             epochs=self.params["epochs"],
             validation_split=self.params["validation_split"],
@@ -273,24 +280,36 @@ class LSTMModel(ModelBase):
             verbose=1,
             **kwargs,
         )
-        
+
         self.model = model
-        
+
         # Update metadata
-        self.metadata.update({
-            "fitted_at": datetime.datetime.now().isoformat(),
-            "data_shape": X.shape,
-            "target_mean": float(y.mean()),
-            "target_std": float(y.std()),
-            "train_loss": float(history.history["loss"][-1]),
-            "train_metrics": {m: float(history.history[m][-1]) for m in self.params["metrics"]},
-            "val_loss": float(history.history["val_loss"][-1]) if "val_loss" in history.history else None,
-            "val_metrics": {f"val_{m}": float(history.history[f"val_{m}"][-1]) for m in self.params["metrics"] if f"val_{m}" in history.history},
-            "epochs_trained": len(history.history["loss"]),
-        })
-        
+        self.metadata.update(
+            {
+                "fitted_at": datetime.datetime.now().isoformat(),
+                "data_shape": X.shape,
+                "target_mean": float(y.mean()),
+                "target_std": float(y.std()),
+                "train_loss": float(history.history["loss"][-1]),
+                "train_metrics": {
+                    m: float(history.history[m][-1]) for m in self.params["metrics"]
+                },
+                "val_loss": (
+                    float(history.history["val_loss"][-1])
+                    if "val_loss" in history.history
+                    else None
+                ),
+                "val_metrics": {
+                    f"val_{m}": float(history.history[f"val_{m}"][-1])
+                    for m in self.params["metrics"]
+                    if f"val_{m}" in history.history
+                },
+                "epochs_trained": len(history.history["loss"]),
+            }
+        )
+
         logger.info(f"Successfully fitted LSTM model {self.name}")
-        
+
         return self
 
     @memoize_with_expiry()
@@ -302,110 +321,112 @@ class LSTMModel(ModelBase):
     ) -> np.ndarray:
         """
         Make predictions using the LSTM model.
-        
+
         Args:
             X: Feature dataframe.
             steps_ahead: Number of steps to predict ahead.
             **kwargs: Additional prediction parameters.
-        
+
         Returns:
             Predicted values.
         """
         if self.model is None:
             raise ValueError("Model has not been fitted")
-        
+
         logger.info(f"Making predictions with LSTM model {self.name}")
-        
+
         # Profile prediction time
         with profile_time(f"lstm_predict_{self.name}", "model"):
             # Scale data if scaler exists
             X_scaled = X.copy()
-            
+
             if hasattr(self, "scaler_X") and self.scaler_X is not None:
                 X_scaled = pd.DataFrame(
                     self.scaler_X.transform(X),
                     columns=X.columns,
                     index=X.index,
                 )
-            
+
             seq_length = self.params["sequence_length"]
-            
+
             if steps_ahead == 1 and len(X) >= seq_length:
                 # Simple prediction using the last sequence
                 X_seq, _ = self._create_sequences(X_scaled)
-                
+
                 if len(X_seq) == 0:
                     # If we can't create full sequences, use the last partial sequence
                     X_array = X_scaled.values
                     if len(X_array) < seq_length:
                         # Pad with zeros if needed
-                        padding = np.zeros((seq_length - len(X_array), X_array.shape[1]))
+                        padding = np.zeros(
+                            (seq_length - len(X_array), X_array.shape[1])
+                        )
                         X_seq = np.array([np.vstack((padding, X_array))])
                     else:
                         X_seq = np.array([X_array[-seq_length:]])
-                
+
                 predictions = self.model.predict(X_seq)
-                
+
                 # Unscale predictions if scaler exists
                 if hasattr(self, "scaler_y") and self.scaler_y is not None:
                     predictions = self.scaler_y.inverse_transform(predictions).flatten()
                 else:
                     predictions = predictions.flatten()
-                
+
                 # Extend predictions to match input length
                 if len(predictions) < len(X):
                     padding = np.full(len(X) - len(predictions), np.nan)
                     predictions = np.concatenate([padding, predictions])
-                
+
                 return predictions
-            
+
             elif steps_ahead > 1:
                 # Multi-step forecasting
                 predictions = []
-                
+
                 # Get the initial sequence
                 X_array = X_scaled.values
-                
+
                 if len(X_array) < seq_length:
                     # Pad with zeros if needed
                     padding = np.zeros((seq_length - len(X_array), X_array.shape[1]))
                     current_seq = np.vstack((padding, X_array))
                 else:
                     current_seq = X_array[-seq_length:]
-                
+
                 # Generate predictions one step at a time
                 for _ in range(steps_ahead):
                     # Reshape for prediction
                     X_seq = np.array([current_seq])
-                    
+
                     # Predict next value
                     next_value = self.model.predict(X_seq)[0, 0]
                     predictions.append(next_value)
-                    
+
                     # Update sequence
                     # This assumes the target is the first feature, adjust as needed
                     current_seq = np.vstack((current_seq[1:], [X_array[-1]]))
                     current_seq[-1, 0] = next_value
-                
+
                 # Unscale predictions if scaler exists
                 predictions = np.array(predictions).reshape(-1, 1)
                 if hasattr(self, "scaler_y") and self.scaler_y is not None:
                     predictions = self.scaler_y.inverse_transform(predictions).flatten()
                 else:
                     predictions = predictions.flatten()
-                
+
                 return predictions
-            
+
             else:
                 raise ValueError("Not enough data to create sequences for prediction")
 
     def save(self, path: Optional[Union[str, os.PathLike]] = None) -> os.PathLike:
         """
         Save the LSTM model to disk.
-        
+
         Args:
             path: Path to save the model. If None, uses the default directory.
-        
+
         Returns:
             Path to the saved model.
         """
@@ -420,19 +441,19 @@ class LSTMModel(ModelBase):
                     "training",
                     f"{self.name}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}",
                 )
-        
+
         # Create directory if it doesn't exist
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        
+
         # Save TensorFlow model separately
         if self.model is not None:
             tf_model_path = f"{path}_tf_model"
             self.model.save(tf_model_path)
             logger.info(f"Saved TensorFlow model to {tf_model_path}")
-            
+
             # Update metadata with TensorFlow model path
             self.metadata["tf_model_path"] = tf_model_path
-        
+
         # Save everything else using joblib
         return super().save(path)
 
@@ -440,10 +461,10 @@ class LSTMModel(ModelBase):
     def load(cls, path: Union[str, os.PathLike]) -> "LSTMModel":
         """
         Load an LSTM model from disk.
-        
+
         Args:
             path: Path to the saved model.
-        
+
         Returns:
             Loaded model instance.
         """
@@ -451,13 +472,15 @@ class LSTMModel(ModelBase):
 
         # Load metadata and other components
         model_instance = super().load(path)
-        
+
         # Load TensorFlow model if available
         tf_model_path = model_instance.metadata.get("tf_model_path")
         if tf_model_path and os.path.exists(tf_model_path):
             model_instance.model = tf.keras.models.load_model(tf_model_path)
             logger.info(f"Loaded TensorFlow model from {tf_model_path}")
         else:
-            logger.warning(f"TensorFlow model path not found or invalid: {tf_model_path}")
-        
+            logger.warning(
+                f"TensorFlow model path not found or invalid: {tf_model_path}"
+            )
+
         return model_instance

@@ -32,7 +32,7 @@ class ProphetModel(ModelBase):
     ):
         """
         Initialize the Prophet model.
-        
+
         Args:
             name: Name of the model.
             seasonality_mode: Seasonality mode (additive or multiplicative).
@@ -53,7 +53,7 @@ class ProphetModel(ModelBase):
                 "Prophet not installed. Please install with pip install prophet"
             )
             raise
-        
+
         super().__init__(
             name=name,
             seasonality_mode=seasonality_mode,
@@ -78,14 +78,14 @@ class ProphetModel(ModelBase):
     ) -> "ProphetModel":
         """
         Fit the Prophet model to the data.
-        
+
         Args:
             X: Feature dataframe.
             y: Target series.
             date_col: Column containing dates. If None, uses the index.
             additional_regressors: List of columns to use as additional regressors.
             **kwargs: Additional fitting parameters.
-        
+
         Returns:
             Self for method chaining.
         """
@@ -96,13 +96,13 @@ class ProphetModel(ModelBase):
                 "Prophet not installed. Please install with pip install prophet"
             )
             raise
-        
+
         logger.info(f"Fitting Prophet model {self.name}")
-        
+
         # Store feature names and target name
         self.features = list(X.columns)
         self.target = y.name if y.name else "target"
-        
+
         # Get date series
         if date_col is not None and date_col in X.columns:
             dates = X[date_col]
@@ -113,10 +113,10 @@ class ProphetModel(ModelBase):
                 raise ValueError(
                     "Either date_col must be provided or X must have a DatetimeIndex"
                 )
-        
+
         # Prepare data for Prophet
         df = pd.DataFrame({"ds": dates, "y": y})
-        
+
         # Initialize and configure Prophet model
         model = Prophet(
             seasonality_mode=self.params["seasonality_mode"],
@@ -127,11 +127,11 @@ class ProphetModel(ModelBase):
             weekly_seasonality=self.params["weekly_seasonality"],
             yearly_seasonality=self.params["yearly_seasonality"],
         )
-        
+
         # Add country holidays if specified
         if self.params["add_country_holidays"]:
             model.add_country_holidays(country_name=self.params["add_country_holidays"])
-        
+
         # Add additional regressors if specified
         if additional_regressors:
             for regressor in additional_regressors:
@@ -140,24 +140,26 @@ class ProphetModel(ModelBase):
                     model.add_regressor(regressor)
                 else:
                     logger.warning(f"Regressor {regressor} not found in dataframe")
-        
+
         # Fit the model
         model.fit(df)
-        
+
         # Store the fitted model
         self.model = model
-        
+
         # Update metadata
-        self.metadata.update({
-            "fitted_at": datetime.datetime.now().isoformat(),
-            "data_shape": X.shape,
-            "target_mean": float(y.mean()),
-            "target_std": float(y.std()),
-            "additional_regressors": additional_regressors,
-        })
-        
+        self.metadata.update(
+            {
+                "fitted_at": datetime.datetime.now().isoformat(),
+                "data_shape": X.shape,
+                "target_mean": float(y.mean()),
+                "target_std": float(y.std()),
+                "additional_regressors": additional_regressors,
+            }
+        )
+
         logger.info(f"Successfully fitted Prophet model {self.name}")
-        
+
         return self
 
     def predict(
@@ -172,7 +174,7 @@ class ProphetModel(ModelBase):
     ) -> np.ndarray:
         """
         Make predictions using the Prophet model.
-        
+
         Args:
             X: Feature dataframe.
             date_col: Column containing dates. If None, uses the index.
@@ -181,15 +183,15 @@ class ProphetModel(ModelBase):
             include_history: Whether to include historical predictions.
             additional_regressors: List of columns to use as additional regressors.
             **kwargs: Additional prediction parameters.
-        
+
         Returns:
             Predicted values.
         """
         if self.model is None:
             raise ValueError("Model has not been fitted")
-        
+
         logger.info(f"Making predictions with Prophet model {self.name}")
-        
+
         # Get date series
         if date_col is not None and date_col in X.columns:
             dates = X[date_col]
@@ -200,15 +202,17 @@ class ProphetModel(ModelBase):
                 # If no dates provided and we need future predictions, use periods and freq
                 if periods is not None:
                     logger.info(f"Creating future dataframe with {periods} periods")
-                    future = self.model.make_future_dataframe(periods=periods, freq=freq)
-                    
+                    future = self.model.make_future_dataframe(
+                        periods=periods, freq=freq
+                    )
+
                     # Add additional regressors if specified
                     if additional_regressors:
                         for regressor in additional_regressors:
                             if regressor in X.columns:
                                 # Create a mapping from existing dates to regressor values
                                 regressor_values = dict(zip(dates, X[regressor]))
-                                
+
                                 # Fill future dataframe with regressor values
                                 # For dates we don't have values for, use the latest available value
                                 latest_value = X[regressor].iloc[-1]
@@ -216,26 +220,28 @@ class ProphetModel(ModelBase):
                                     lambda x: regressor_values.get(x, latest_value)
                                 )
                             else:
-                                logger.warning(f"Regressor {regressor} not found in dataframe")
-                    
+                                logger.warning(
+                                    f"Regressor {regressor} not found in dataframe"
+                                )
+
                     # Make predictions
                     forecast = self.model.predict(future)
-                    
+
                     # Return only future predictions if not include_history
                     if not include_history:
                         forecast = forecast.iloc[-periods:]
-                    
+
                     return forecast["yhat"].values
-                
+
                 else:
                     raise ValueError(
                         "Either date_col must be provided, X must have a DatetimeIndex, "
                         "or periods must be specified for future predictions"
                     )
-        
+
         # Prepare data for prediction
         future = pd.DataFrame({"ds": dates})
-        
+
         # Add additional regressors if specified
         if additional_regressors:
             for regressor in additional_regressors:
@@ -243,26 +249,26 @@ class ProphetModel(ModelBase):
                     future[regressor] = X[regressor]
                 else:
                     logger.warning(f"Regressor {regressor} not found in dataframe")
-        
+
         # Make predictions
         forecast = self.model.predict(future)
-        
+
         return forecast["yhat"].values
 
     def get_components(self, X: pd.DataFrame, date_col: str = None) -> pd.DataFrame:
         """
         Get the forecast components (trend, seasonality, etc.).
-        
+
         Args:
             X: Feature dataframe.
             date_col: Column containing dates. If None, uses the index.
-        
+
         Returns:
             Dataframe with forecast components.
         """
         if self.model is None:
             raise ValueError("Model has not been fitted")
-        
+
         # Get date series
         if date_col is not None and date_col in X.columns:
             dates = X[date_col]
@@ -273,16 +279,17 @@ class ProphetModel(ModelBase):
                 raise ValueError(
                     "Either date_col must be provided or X must have a DatetimeIndex"
                 )
-        
+
         # Prepare data for prediction
         future = pd.DataFrame({"ds": dates})
-        
+
         # Make predictions with components
         forecast = self.model.predict(future)
-        
+
         component_columns = [
-            col for col in forecast.columns
+            col
+            for col in forecast.columns
             if col not in {"ds", "yhat", "yhat_lower", "yhat_upper"}
         ]
-        
+
         return forecast[["ds"] + component_columns]

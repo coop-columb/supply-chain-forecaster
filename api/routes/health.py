@@ -9,7 +9,7 @@ router = APIRouter()
 async def health_check():
     """
     Check if the API is healthy.
-    
+
     Returns:
         Health status.
     """
@@ -20,7 +20,7 @@ async def health_check():
 async def readiness_check():
     """
     Check if the API is ready to serve requests.
-    
+
     Returns:
         Readiness status.
     """
@@ -31,7 +31,7 @@ async def readiness_check():
 async def liveness_check():
     """
     Check if the API is alive.
-    
+
     Returns:
         Liveness status.
     """
@@ -42,7 +42,7 @@ async def liveness_check():
 async def version():
     """
     Get the API version.
-    
+
     Returns:
         API version.
     """

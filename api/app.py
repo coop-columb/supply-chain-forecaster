@@ -23,31 +23,35 @@ from utils import (
     set_request_id,
     setup_logger,
 )
-from utils.monitoring import PrometheusMiddleware, create_monitoring_endpoints, setup_monitoring
+from utils.monitoring import (
+    PrometheusMiddleware,
+    create_monitoring_endpoints,
+    setup_monitoring,
+)
 
 logger = get_logger(__name__)
 
 
 class RequestTracingMiddleware(BaseHTTPMiddleware):
     """Middleware to add request ID and timing to each request."""
-    
+
     async def dispatch(self, request: Request, call_next):
         # Generate or extract request ID
         request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
         set_request_id(request_id)
-        
+
         # Add request ID to response headers
         start_time = time.time()
-        
+
         try:
             # Process the request
             response = await call_next(request)
-            
+
             # Add timing and request ID headers
             duration_ms = (time.time() - start_time) * 1000
             response.headers["X-Request-ID"] = request_id
             response.headers["X-Process-Time-ms"] = str(round(duration_ms, 2))
-            
+
             # Log the request if API metrics collection is enabled
             if config.COLLECT_API_METRICS:
                 log_request(
@@ -57,7 +61,7 @@ class RequestTracingMiddleware(BaseHTTPMiddleware):
                     status_code=response.status_code,
                     duration_ms=duration_ms,
                 )
-            
+
             return response
         finally:
             # Reset request ID at the end of processing
@@ -67,7 +71,7 @@ class RequestTracingMiddleware(BaseHTTPMiddleware):
 def create_app() -> FastAPI:
     """
     Create and configure the FastAPI application.
-    
+
     Returns:
         Configured FastAPI application.
     """
@@ -76,7 +80,7 @@ def create_app() -> FastAPI:
     log_file = config.LOG_FILE if hasattr(config, "LOG_FILE") else None
     json_format = getattr(config, "LOG_JSON_FORMAT", False)
     env = getattr(config, "LOG_ENVIRONMENT", "development")
-    
+
     setup_logger(
         log_level=config.LOG_LEVEL,
         log_file=log_file,
@@ -85,32 +89,32 @@ def create_app() -> FastAPI:
         json_format=json_format,
         env=env,
     )
-    
+
     # Create FastAPI app
     app = FastAPI(
         title="Supply Chain Forecaster API",
         description="API for supply chain forecasting and anomaly detection",
         version="0.1.0",
     )
-    
+
     # Add monitoring if enabled in production
     if is_production and getattr(config, "PROMETHEUS_METRICS", False):
         # Set up monitoring and add Prometheus middleware
         setup_monitoring(export_metrics=True)
         app.add_middleware(PrometheusMiddleware)
-        
+
         # Create monitoring endpoints
         create_monitoring_endpoints(app)
-    
+
     # Add request tracing middleware
     app.add_middleware(RequestTracingMiddleware)
-    
+
     # Add CORS middleware with configured settings
     allowed_origins = getattr(config, "ALLOWED_ORIGINS", ["*"])
     allow_credentials = getattr(config, "CORS_ALLOW_CREDENTIALS", True)
     allow_methods = getattr(config, "CORS_ALLOW_METHODS", ["*"])
     allow_headers = getattr(config, "CORS_ALLOW_HEADERS", ["*"])
-    
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=allowed_origins,
@@ -119,21 +123,23 @@ def create_app() -> FastAPI:
         allow_headers=allow_headers,
         expose_headers=["X-Request-ID", "X-Process-Time-ms"],
     )
-    
+
     # Add rate limiting if enabled
     if getattr(config, "ENABLE_RATE_LIMITING", False):
         from slowapi import Limiter, _rate_limit_exceeded_handler
         from slowapi.errors import RateLimitExceeded
         from slowapi.middleware import SlowAPIMiddleware
         from slowapi.util import get_remote_address
-        
+
         limiter = Limiter(key_func=get_remote_address)
         app.state.limiter = limiter
         app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
         app.add_middleware(SlowAPIMiddleware)
-        
-        logger.info(f"Rate limiting enabled: {config.RATE_LIMIT_REQUESTS_PER_MINUTE} requests per minute")
-    
+
+        logger.info(
+            f"Rate limiting enabled: {config.RATE_LIMIT_REQUESTS_PER_MINUTE} requests per minute"
+        )
+
     # Add exception handler
     @app.exception_handler(ApplicationError)
     async def application_error_handler(request: Request, exc: ApplicationError):
@@ -146,12 +152,12 @@ def create_app() -> FastAPI:
             request_path=request.url.path,
             request_id=get_request_id(),
         )
-        
+
         return JSONResponse(
             status_code=exc.status_code,
             content={"error": exc.message, "details": exc.details},
         )
-    
+
     # Include routers
     app.include_router(health.router, tags=["health"])
     app.include_router(auth.router, prefix="/auth", tags=["auth"])
@@ -159,7 +165,7 @@ def create_app() -> FastAPI:
     app.include_router(forecasting.router, prefix="/forecasting", tags=["forecasting"])
     app.include_router(prediction.router, prefix="/predictions", tags=["predictions"])
     app.include_router(anomaly.router, prefix="/anomalies", tags=["anomalies"])
-    
+
     # Log application startup
     @app.on_event("startup")
     async def startup_event():
@@ -170,22 +176,22 @@ def create_app() -> FastAPI:
             auth_service.api_keys_file = config.API_KEYS_FILE
         if hasattr(config, "TOKEN_EXPIRE_MINUTES"):
             auth_service.token_expire_minutes = config.TOKEN_EXPIRE_MINUTES
-        
+
         # Reload API keys
         auth_service.api_keys = auth_service._load_api_keys()
-        
+
         logger.info(
             f"Starting Supply Chain Forecaster API (version: {app.version})",
             version=app.version,
             environment=os.getenv("ENV", "development"),
             auth_enabled=getattr(config, "ENABLE_AUTH", False),
         )
-    
+
     # Log application shutdown
     @app.on_event("shutdown")
     async def shutdown_event():
         logger.info("Shutting down Supply Chain Forecaster API")
-    
+
     return app
 
 

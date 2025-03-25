@@ -11,23 +11,23 @@ except (ImportError, RuntimeError):
     # If api.app cannot be imported, create a simple mock app for testing
     def create_app():
         app = FastAPI()
-        
+
         @app.get("/health")
         def health():
             return {"status": "ok"}
-        
+
         @app.get("/health/readiness")
         def readiness():
             return {"status": "ready"}
-        
+
         @app.get("/health/liveness")
         def liveness():
             return {"status": "alive"}
-        
+
         @app.get("/version")
         def version():
             return {"version": "0.1.0"}
-        
+
         return app
 
 
@@ -44,10 +44,11 @@ def client():
             try:
                 # If normal initialization fails, create a basic test client wrapper
                 from fastapi.testclient import TestClient as FastAPITestClient
+
                 class CompatibilityTestClient:
                     def __init__(self, app):
                         self.app = app
-                    
+
                     def get(self, url, **kwargs):
                         # Simple mock response for health endpoints
                         if url == "/health":
@@ -59,15 +60,15 @@ def client():
                         elif url == "/version":
                             return MockResponse(200, {"version": "0.1.0"})
                         return MockResponse(404, {"detail": "Not found"})
-                
+
                 class MockResponse:
                     def __init__(self, status_code, json_data):
                         self.status_code = status_code
                         self._json_data = json_data
-                    
+
                     def json(self):
                         return self._json_data
-                
+
                 return CompatibilityTestClient(app)
             except Exception as backup_e:
                 print(f"Failed to create compatibility client: {backup_e}")
@@ -82,7 +83,7 @@ def test_health_check(client):
     # Skip test if client is None
     if client is None:
         pytest.skip("API client could not be initialized")
-        
+
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
@@ -93,7 +94,7 @@ def test_readiness_check(client):
     # Skip test if client is None
     if client is None:
         pytest.skip("API client could not be initialized")
-        
+
     response = client.get("/health/readiness")
     assert response.status_code == 200
     assert response.json() == {"status": "ready"}
@@ -104,7 +105,7 @@ def test_liveness_check(client):
     # Skip test if client is None
     if client is None:
         pytest.skip("API client could not be initialized")
-        
+
     response = client.get("/health/liveness")
     assert response.status_code == 200
     assert response.json() == {"status": "alive"}
@@ -115,7 +116,7 @@ def test_version(client):
     # Skip test if client is None
     if client is None:
         pytest.skip("API client could not be initialized")
-        
+
     response = client.get("/version")
     assert response.status_code == 200
     assert "version" in response.json()

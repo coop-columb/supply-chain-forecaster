@@ -15,18 +15,22 @@ router = APIRouter()
 
 class PredictionParams(BaseModel):
     """Parameters for making predictions with a trained model."""
-    
+
     model_name: str = Field(..., description="Name of the model to use")
     model_type: str = Field(..., description="Type of the model")
     feature_columns: List[str] = Field(..., description="Feature column names")
-    from_deployment: bool = Field(True, description="Whether to load model from deployment")
-    prediction_params: Optional[Dict] = Field(None, description="Prediction-specific parameters")
+    from_deployment: bool = Field(
+        True, description="Whether to load model from deployment"
+    )
+    prediction_params: Optional[Dict] = Field(
+        None, description="Prediction-specific parameters"
+    )
 
 
 def get_model_service():
     """
     Dependency to get the model service.
-    
+
     Returns:
         Model service instance.
     """
@@ -36,10 +40,10 @@ def get_model_service():
 async def read_csv_file(file: UploadFile) -> pd.DataFrame:
     """
     Read CSV file into a pandas DataFrame.
-    
+
     Args:
         file: Uploaded CSV file.
-    
+
     Returns:
         DataFrame containing the data.
     """
@@ -62,18 +66,18 @@ async def predict(
 ):
     """
     Make predictions using a trained model.
-    
+
     Args:
         params: Prediction parameters.
         file: CSV file containing the feature data.
-    
+
     Returns:
         Prediction results.
     """
     try:
         # Read data
         df = await read_csv_file(file)
-        
+
         # Validate columns
         for column in params.feature_columns:
             if column not in df.columns:
@@ -81,24 +85,24 @@ async def predict(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Column '{column}' not found in data",
                 )
-        
+
         # Prepare features
         X = df[params.feature_columns]
-        
+
         # Load model
         model = model_service.load_model(
             params.model_name, params.model_type, params.from_deployment
         )
-        
+
         # Make predictions
         predictions = model.predict(X, **(params.prediction_params or {}))
-        
+
         return {
             "status": "success",
             "model_name": params.model_name,
             "predictions": predictions.tolist(),
         }
-    
+
     except ModelError as e:
         logger.error(f"Error making predictions: {str(e)}")
         raise HTTPException(

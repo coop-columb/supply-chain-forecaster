@@ -31,7 +31,7 @@ class XGBoostModel(ModelBase):
     ):
         """
         Initialize the XGBoost model.
-        
+
         Args:
             name: Name of the model.
             n_estimators: Number of gradient boosted trees.
@@ -51,7 +51,7 @@ class XGBoostModel(ModelBase):
                 "XGBoost not installed. Please install with pip install xgboost"
             )
             raise
-        
+
         super().__init__(
             name=name,
             n_estimators=n_estimators,
@@ -76,7 +76,7 @@ class XGBoostModel(ModelBase):
     ) -> "XGBoostModel":
         """
         Fit the XGBoost model to the data.
-        
+
         Args:
             X: Feature dataframe.
             y: Target series.
@@ -84,7 +84,7 @@ class XGBoostModel(ModelBase):
             early_stopping_rounds: Number of rounds for early stopping.
             verbose: Whether to print training progress.
             **kwargs: Additional fitting parameters.
-        
+
         Returns:
             Self for method chaining.
         """
@@ -95,13 +95,13 @@ class XGBoostModel(ModelBase):
                 "XGBoost not installed. Please install with pip install xgboost"
             )
             raise
-        
+
         logger.info(f"Fitting XGBoost model {self.name}")
-        
+
         # Store feature names and target name
         self.features = list(X.columns)
         self.target = y.name if y.name else "target"
-        
+
         # Initialize model
         model = xgb.XGBRegressor(
             n_estimators=self.params["n_estimators"],
@@ -114,32 +114,35 @@ class XGBoostModel(ModelBase):
             tree_method=self.params["tree_method"],
             **kwargs,
         )
-        
+
         # Fit the model
         model.fit(
-            X, y,
+            X,
+            y,
             eval_set=eval_set,
             early_stopping_rounds=early_stopping_rounds,
             verbose=verbose,
         )
-        
+
         self.model = model
-        
+
         # Update metadata
-        self.metadata.update({
-            "fitted_at": datetime.datetime.now().isoformat(),
-            "data_shape": X.shape,
-            "target_mean": float(y.mean()),
-            "target_std": float(y.std()),
-            "feature_importance": dict(zip(X.columns, model.feature_importances_)),
-        })
-        
+        self.metadata.update(
+            {
+                "fitted_at": datetime.datetime.now().isoformat(),
+                "data_shape": X.shape,
+                "target_mean": float(y.mean()),
+                "target_std": float(y.std()),
+                "feature_importance": dict(zip(X.columns, model.feature_importances_)),
+            }
+        )
+
         # Add best iteration if early stopping was used
         if hasattr(model, "best_iteration"):
             self.metadata["best_iteration"] = model.best_iteration
-        
+
         logger.info(f"Successfully fitted XGBoost model {self.name}")
-        
+
         return self
 
     def predict(
@@ -149,37 +152,39 @@ class XGBoostModel(ModelBase):
     ) -> np.ndarray:
         """
         Make predictions using the XGBoost model.
-        
+
         Args:
             X: Feature dataframe.
             **kwargs: Additional prediction parameters.
-        
+
         Returns:
             Predicted values.
         """
         if self.model is None:
             raise ValueError("Model has not been fitted")
-        
+
         logger.info(f"Making predictions with XGBoost model {self.name}")
-        
+
         # Make predictions
         return self.model.predict(X)
 
     def get_feature_importance(self) -> pd.DataFrame:
         """
         Get feature importance from the model.
-        
+
         Returns:
             Dataframe with feature importance.
         """
         if self.model is None:
             raise ValueError("Model has not been fitted")
-        
+
         importance = self.model.feature_importances_
-        importance_df = pd.DataFrame({
-            "Feature": self.features,
-            "Importance": importance,
-        })
+        importance_df = pd.DataFrame(
+            {
+                "Feature": self.features,
+                "Importance": importance,
+            }
+        )
         importance_df = importance_df.sort_values("Importance", ascending=False)
-        
+
         return importance_df

@@ -32,7 +32,7 @@ class ARIMAModel(ModelBase):
     ):
         """
         Initialize the ARIMA model.
-        
+
         Args:
             name: Name of the model.
             order: ARIMA order (p, d, q).
@@ -51,7 +51,7 @@ class ARIMAModel(ModelBase):
                 "statsmodels not installed. Please install with pip install statsmodels"
             )
             raise
-        
+
         super().__init__(
             name=name,
             order=order,
@@ -74,14 +74,14 @@ class ARIMAModel(ModelBase):
     ) -> "ARIMAModel":
         """
         Fit the ARIMA model to the data.
-        
+
         Args:
             X: Feature dataframe.
             y: Target series.
             date_col: Column containing dates. If None, uses the index.
             exog_cols: List of exogenous variables to include.
             **kwargs: Additional fitting parameters.
-        
+
         Returns:
             Self for method chaining.
         """
@@ -93,21 +93,23 @@ class ARIMAModel(ModelBase):
                 "statsmodels not installed. Please install with pip install statsmodels"
             )
             raise
-        
+
         logger.info(f"Fitting ARIMA model {self.name}")
-        
+
         # Store feature names and target name
         self.features = list(X.columns)
         self.target = y.name if y.name else "target"
-        
+
         # Get date series
         if date_col is not None and date_col in X.columns:
             dates = X[date_col]
             y.index = pd.DatetimeIndex(dates)
         else:
-            if not isinstance(y.index, pd.DatetimeIndex) and isinstance(X.index, pd.DatetimeIndex):
+            if not isinstance(y.index, pd.DatetimeIndex) and isinstance(
+                X.index, pd.DatetimeIndex
+            ):
                 y.index = X.index
-        
+
         # Prepare exogenous variables if specified
         exog = None
         if exog_cols:
@@ -117,21 +119,22 @@ class ARIMAModel(ModelBase):
                 logger.info(f"Using exogenous variables: {exog_cols}")
             else:
                 logger.warning("No valid exogenous variables found")
-        
+
         # Use auto_arima if specified
         if self.params["auto_arima"]:
             try:
                 import pmdarima as pm
+
                 from config import config
-                
+
                 logger.info("Using auto_arima to find best parameters")
-                
+
                 with profile_time("auto_arima_param_selection", "model"):
                     # Define default kwargs with efficient settings
                     default_kwargs = {
-                        "start_p": 0, 
+                        "start_p": 0,
                         "max_p": 3,
-                        "start_q": 0, 
+                        "start_q": 0,
                         "max_q": 2,
                         "seasonal": True,
                         "m": 7,  # Weekly seasonality
@@ -139,48 +142,56 @@ class ARIMAModel(ModelBase):
                         "max_D": 1,
                         "stepwise": True,  # Faster than exact
                         "n_jobs": -1,  # Use all CPU cores
-                        "information_criterion": "aic"
+                        "information_criterion": "aic",
                     }
-                    
+
                     # Development mode: use faster parameter search
-                    if hasattr(config, "QUICK_TRAIN_ITERATIONS") and config.QUICK_TRAIN_ITERATIONS:
-                        default_kwargs.update({
-                            "max_p": 1,
-                            "max_q": 1,
-                            "max_d": 1,
-                            "max_D": 0,
-                            "max_order": 2,
-                            "n_fits": config.QUICK_TRAIN_ITERATIONS
-                        })
-                    
+                    if (
+                        hasattr(config, "QUICK_TRAIN_ITERATIONS")
+                        and config.QUICK_TRAIN_ITERATIONS
+                    ):
+                        default_kwargs.update(
+                            {
+                                "max_p": 1,
+                                "max_q": 1,
+                                "max_d": 1,
+                                "max_D": 0,
+                                "max_order": 2,
+                                "n_fits": config.QUICK_TRAIN_ITERATIONS,
+                            }
+                        )
+
                     # Merge with user-provided kwargs
-                    auto_arima_kwargs = {**default_kwargs, **self.params["auto_arima_kwargs"]}
-                    
+                    auto_arima_kwargs = {
+                        **default_kwargs,
+                        **self.params["auto_arima_kwargs"],
+                    }
+
                     # Run auto_arima with optimized settings
                     auto_model = pm.auto_arima(
                         y,
                         exogenous=exog,
                         **auto_arima_kwargs,
                     )
-                
+
                 # Update model parameters with auto_arima results
                 self.params["order"] = auto_model.order
                 self.params["seasonal_order"] = auto_model.seasonal_order
-                
+
                 logger.info(
                     f"Auto ARIMA selected order={self.params['order']}, "
                     f"seasonal_order={self.params['seasonal_order']}"
                 )
-                
+
                 # Use the fitted model from auto_arima
                 self.model = auto_model
-                
+
             except ImportError:
                 logger.error(
                     "pmdarima not installed. Please install with pip install pmdarima"
                 )
                 raise
-        
+
         else:
             # Fit ARIMA or SARIMAX model
             if self.params["seasonal_order"]:
@@ -202,26 +213,28 @@ class ARIMAModel(ModelBase):
                     order=self.params["order"],
                     trend=self.params["trend"],
                 )
-            
+
             # Fit the model
             model_fit = model.fit()
             self.model = model_fit
-        
+
         # Update metadata
-        self.metadata.update({
-            "fitted_at": datetime.datetime.now().isoformat(),
-            "data_shape": X.shape,
-            "target_mean": float(y.mean()),
-            "target_std": float(y.std()),
-            "exog_cols": exog_cols,
-            "order": self.params["order"],
-            "seasonal_order": self.params["seasonal_order"],
-            "aic": float(self.model.aic) if hasattr(self.model, "aic") else None,
-            "bic": float(self.model.bic) if hasattr(self.model, "bic") else None,
-        })
-        
+        self.metadata.update(
+            {
+                "fitted_at": datetime.datetime.now().isoformat(),
+                "data_shape": X.shape,
+                "target_mean": float(y.mean()),
+                "target_std": float(y.std()),
+                "exog_cols": exog_cols,
+                "order": self.params["order"],
+                "seasonal_order": self.params["seasonal_order"],
+                "aic": float(self.model.aic) if hasattr(self.model, "aic") else None,
+                "bic": float(self.model.bic) if hasattr(self.model, "bic") else None,
+            }
+        )
+
         logger.info(f"Successfully fitted ARIMA model {self.name}")
-        
+
         return self
 
     @memoize_with_expiry()
@@ -238,7 +251,7 @@ class ARIMAModel(ModelBase):
     ) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray, np.ndarray]]:
         """
         Make predictions using the ARIMA model.
-        
+
         Args:
             X: Feature dataframe.
             date_col: Column containing dates. If None, uses the index.
@@ -248,15 +261,15 @@ class ARIMAModel(ModelBase):
             alpha: Significance level for confidence intervals.
             dynamic: Whether to do dynamic forecasting.
             **kwargs: Additional prediction parameters.
-        
+
         Returns:
             Predicted values, optionally with confidence intervals.
         """
         if self.model is None:
             raise ValueError("Model has not been fitted")
-        
+
         logger.info(f"Making predictions with ARIMA model {self.name}")
-        
+
         with profile_time(f"arima_predict_{self.name}", "model"):
             # Prepare exogenous variables if specified
             exog = None
@@ -267,18 +280,20 @@ class ARIMAModel(ModelBase):
                     logger.info(f"Using exogenous variables: {exog_cols}")
                 else:
                     logger.warning("No valid exogenous variables found")
-            
+
             # Determine the number of steps to forecast
             if steps is None:
                 steps = len(X)
-            
+
             # Make predictions
             try:
                 if hasattr(self.model, "get_forecast"):
                     # SARIMAX or ARIMA from statsmodels.tsa.arima.model
-                    forecast = self.model.get_forecast(steps=steps, exog=exog, alpha=alpha)
+                    forecast = self.model.get_forecast(
+                        steps=steps, exog=exog, alpha=alpha
+                    )
                     predictions = forecast.predicted_mean
-                    
+
                     if return_conf_int:
                         conf_int = forecast.conf_int(alpha=alpha)
                         lower = conf_int.iloc[:, 0]
@@ -286,11 +301,16 @@ class ARIMAModel(ModelBase):
                         return predictions.values, lower.values, upper.values
                     else:
                         return predictions.values
-                
+
                 elif hasattr(self.model, "predict"):
                     # auto_arima model from pmdarima
-                    predictions = self.model.predict(n_periods=steps, exogenous=exog, return_conf_int=return_conf_int, alpha=alpha)
-                    
+                    predictions = self.model.predict(
+                        n_periods=steps,
+                        exogenous=exog,
+                        return_conf_int=return_conf_int,
+                        alpha=alpha,
+                    )
+
                     if return_conf_int:
                         predictions, conf_int = predictions
                         lower = conf_int[:, 0]
@@ -298,10 +318,10 @@ class ARIMAModel(ModelBase):
                         return predictions, lower, upper
                     else:
                         return predictions
-                
+
                 else:
                     raise AttributeError("Model has no predict or get_forecast method")
-            
+
             except Exception as e:
                 logger.error(f"Error making predictions: {str(e)}")
                 raise

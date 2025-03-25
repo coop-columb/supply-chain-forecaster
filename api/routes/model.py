@@ -14,7 +14,7 @@ router = APIRouter()
 def get_model_service():
     """
     Dependency to get the model service.
-    
+
     Returns:
         Model service instance.
     """
@@ -29,7 +29,7 @@ async def list_models(
 ):
     """
     List available models.
-    
+
     Returns:
         List of available model types or trained/deployed models.
     """
@@ -59,12 +59,12 @@ async def get_model(
 ):
     """
     Get details for a specific model.
-    
+
     Args:
         model_name: Name of the model.
         model_type: Type of the model.
         from_deployment: Whether to load from deployment directory.
-    
+
     Returns:
         Model details.
     """
@@ -92,10 +92,10 @@ async def deploy_model(
 ):
     """
     Deploy a model from training to deployment.
-    
+
     Args:
         model_name: Name of the model to deploy.
-    
+
     Returns:
         Deployment status.
     """
@@ -130,11 +130,11 @@ async def delete_model(
 ):
     """
     Delete a model.
-    
+
     Args:
         model_name: Name of the model to delete.
         from_deployment: Whether to delete from deployment directory.
-    
+
     Returns:
         Deletion status.
     """
@@ -142,7 +142,7 @@ async def delete_model(
         model_service.delete_model(model_name, from_deployment)
         return {
             "status": "success",
-            "message": f"Model '{model_name}' deleted successfully"
+            "message": f"Model '{model_name}' deleted successfully",
         }
     except ModelError as e:
         logger.error(f"Error deleting model: {str(e)}")

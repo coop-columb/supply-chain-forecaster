@@ -69,28 +69,40 @@ class BaseConfig:
     # Logging configuration
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
     LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    
+
     # Security configuration
     ENABLE_AUTH = os.getenv("ENABLE_AUTH", "False").lower() == "true"
     SECRET_KEY = os.getenv("SECRET_KEY", None)
     API_KEYS_FILE = os.getenv("API_KEYS_FILE", str(PROJECT_ROOT / "api_keys.json"))
     TOKEN_EXPIRE_MINUTES = int(os.getenv("TOKEN_EXPIRE_MINUTES", "60"))
     ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
-    
+
     # Performance profiling configuration
     ENABLE_PROFILING = os.getenv("ENABLE_PROFILING", "False").lower() == "true"
-    PROFILING_SAMPLE_RATE = float(os.getenv("PROFILING_SAMPLE_RATE", "0.1"))  # Sample 10% of requests by default
-    
+    PROFILING_SAMPLE_RATE = float(
+        os.getenv("PROFILING_SAMPLE_RATE", "0.1")
+    )  # Sample 10% of requests by default
+
     # Caching configuration
     ENABLE_MODEL_CACHING = os.getenv("ENABLE_MODEL_CACHING", "False").lower() == "true"
     MODEL_CACHE_SIZE = int(os.getenv("MODEL_CACHE_SIZE", "10"))
-    ENABLE_RESPONSE_CACHING = os.getenv("ENABLE_RESPONSE_CACHING", "False").lower() == "true"
-    RESPONSE_CACHE_TTL_SECONDS = int(os.getenv("RESPONSE_CACHE_TTL_SECONDS", "3600"))  # 1 hour
-    
+    ENABLE_RESPONSE_CACHING = (
+        os.getenv("ENABLE_RESPONSE_CACHING", "False").lower() == "true"
+    )
+    RESPONSE_CACHE_TTL_SECONDS = int(
+        os.getenv("RESPONSE_CACHE_TTL_SECONDS", "3600")
+    )  # 1 hour
+
     # Dashboard optimization configuration
-    ENABLE_DASHBOARD_CACHING = os.getenv("ENABLE_DASHBOARD_CACHING", "False").lower() == "true"
-    DASHBOARD_CACHE_TTL_SECONDS = int(os.getenv("DASHBOARD_CACHE_TTL_SECONDS", "600"))  # 10 minutes
-    DASHBOARD_MAX_POINTS = int(os.getenv("DASHBOARD_MAX_POINTS", "500"))  # Max data points in charts
+    ENABLE_DASHBOARD_CACHING = (
+        os.getenv("ENABLE_DASHBOARD_CACHING", "False").lower() == "true"
+    )
+    DASHBOARD_CACHE_TTL_SECONDS = int(
+        os.getenv("DASHBOARD_CACHE_TTL_SECONDS", "600")
+    )  # 10 minutes
+    DASHBOARD_MAX_POINTS = int(
+        os.getenv("DASHBOARD_MAX_POINTS", "500")
+    )  # Max data points in charts
 
     def as_dict(self) -> Dict[str, Union[str, int, bool, List[int]]]:
         """Return configuration as a dictionary."""

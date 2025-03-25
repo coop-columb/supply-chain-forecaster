@@ -28,7 +28,7 @@ class ExponentialSmoothingModel(ModelBase):
     ):
         """
         Initialize the exponential smoothing model.
-        
+
         Args:
             name: Name of the model.
             trend: Type of trend component (None, 'add', or 'mul').
@@ -45,7 +45,7 @@ class ExponentialSmoothingModel(ModelBase):
                 "statsmodels not installed. Please install with pip install statsmodels"
             )
             raise
-        
+
         super().__init__(
             name=name,
             trend=trend,
@@ -66,14 +66,14 @@ class ExponentialSmoothingModel(ModelBase):
     ) -> "ExponentialSmoothingModel":
         """
         Fit the exponential smoothing model to the data.
-        
+
         Args:
             X: Feature dataframe.
             y: Target series.
             date_col: Column containing dates. If None, uses the index.
             detect_seasonality: Whether to automatically detect seasonality.
             **kwargs: Additional fitting parameters.
-        
+
         Returns:
             Self for method chaining.
         """
@@ -84,30 +84,32 @@ class ExponentialSmoothingModel(ModelBase):
                 "statsmodels not installed. Please install with pip install statsmodels"
             )
             raise
-        
+
         logger.info(f"Fitting exponential smoothing model {self.name}")
-        
+
         # Store feature names and target name
         self.features = list(X.columns)
         self.target = y.name if y.name else "target"
-        
+
         # Get date series
         if date_col is not None and date_col in X.columns:
             dates = X[date_col]
             y.index = pd.DatetimeIndex(dates)
         else:
-            if not isinstance(y.index, pd.DatetimeIndex) and isinstance(X.index, pd.DatetimeIndex):
+            if not isinstance(y.index, pd.DatetimeIndex) and isinstance(
+                X.index, pd.DatetimeIndex
+            ):
                 y.index = X.index
-        
+
         # Detect seasonality if requested
         seasonal = self.params["seasonal"]
         seasonal_periods = self.params["seasonal_periods"]
-        
+
         if detect_seasonality and seasonal is not None and seasonal_periods is None:
             # Try to detect seasonal periods from data frequency
             if isinstance(y.index, pd.DatetimeIndex):
                 freq = pd.infer_freq(y.index)
-                
+
                 if freq is not None:
                     if freq.startswith("D"):
                         seasonal_periods = 7  # Weekly seasonality
@@ -117,18 +119,22 @@ class ExponentialSmoothingModel(ModelBase):
                         seasonal_periods = 4  # Quarterly seasonality
                     elif freq.startswith("H"):
                         seasonal_periods = 24  # Hourly seasonality
-                    
-                    logger.info(f"Detected frequency {freq}, using seasonal_periods={seasonal_periods}")
+
+                    logger.info(
+                        f"Detected frequency {freq}, using seasonal_periods={seasonal_periods}"
+                    )
                 else:
                     logger.warning("Could not infer frequency from data")
             else:
                 logger.warning("Cannot detect seasonality without datetime index")
-        
+
         # Use detected seasonal_periods or fall back to parameter
         if seasonal_periods is None and seasonal is not None:
-            logger.warning("Seasonal component specified but no seasonal_periods provided")
+            logger.warning(
+                "Seasonal component specified but no seasonal_periods provided"
+            )
             seasonal = None
-        
+
         # Create and fit the model
         model = ExponentialSmoothing(
             y,
@@ -139,28 +145,32 @@ class ExponentialSmoothingModel(ModelBase):
             initialization_method=self.params["initialization_method"],
             **kwargs,
         )
-        
+
         model_fit = model.fit()
-        
+
         self.model = model_fit
-        
+
         # Update metadata
-        self.metadata.update({
-            "fitted_at": datetime.datetime.now().isoformat(),
-            "data_shape": X.shape,
-            "target_mean": float(y.mean()),
-            "target_std": float(y.std()),
-            "trend": self.params["trend"],
-            "damped_trend": self.params["damped_trend"],
-            "seasonal": seasonal,
-            "seasonal_periods": seasonal_periods,
-            "aic": float(model_fit.aic) if hasattr(model_fit, "aic") else None,
-            "bic": float(model_fit.bic) if hasattr(model_fit, "bic") else None,
-            "params": model_fit.params.tolist() if hasattr(model_fit, "params") else None,
-        })
-        
+        self.metadata.update(
+            {
+                "fitted_at": datetime.datetime.now().isoformat(),
+                "data_shape": X.shape,
+                "target_mean": float(y.mean()),
+                "target_std": float(y.std()),
+                "trend": self.params["trend"],
+                "damped_trend": self.params["damped_trend"],
+                "seasonal": seasonal,
+                "seasonal_periods": seasonal_periods,
+                "aic": float(model_fit.aic) if hasattr(model_fit, "aic") else None,
+                "bic": float(model_fit.bic) if hasattr(model_fit, "bic") else None,
+                "params": (
+                    model_fit.params.tolist() if hasattr(model_fit, "params") else None
+                ),
+            }
+        )
+
         logger.info(f"Successfully fitted exponential smoothing model {self.name}")
-        
+
         return self
 
     def predict(
@@ -173,35 +183,38 @@ class ExponentialSmoothingModel(ModelBase):
     ) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray, np.ndarray]]:
         """
         Make predictions using the exponential smoothing model.
-        
+
         Args:
             X: Feature dataframe.
             steps: Number of steps to forecast.
             return_conf_int: Whether to return confidence intervals.
             alpha: Significance level for confidence intervals.
             **kwargs: Additional prediction parameters.
-        
+
         Returns:
             Predicted values, optionally with confidence intervals.
         """
         if self.model is None:
             raise ValueError("Model has not been fitted")
-        
+
         logger.info(f"Making predictions with exponential smoothing model {self.name}")
-        
+
         # Determine the number of steps to forecast
         if steps is None:
             steps = len(X)
-        
+
         # Make predictions
         if return_conf_int:
             forecast = self.model.forecast(steps=steps, **kwargs)
-            pred_conf = self.model.get_prediction(start=len(self.model.fittedvalues), end=len(self.model.fittedvalues) + steps - 1)
+            pred_conf = self.model.get_prediction(
+                start=len(self.model.fittedvalues),
+                end=len(self.model.fittedvalues) + steps - 1,
+            )
             conf_int = pred_conf.conf_int(alpha=alpha)
-            
+
             lower = conf_int.iloc[:, 0].values
             upper = conf_int.iloc[:, 1].values
-            
+
             return forecast.values, lower, upper
         else:
             forecast = self.model.forecast(steps=steps, **kwargs)
