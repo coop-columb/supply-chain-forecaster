@@ -1,6 +1,9 @@
 #!/bin/bash
 # Script to set up a local Kubernetes cluster for development and CD pipeline testing
-# This makes the CD pipeline work with "real" Kubernetes deployments without simulation
+# This enables the transition from simulation to real Kubernetes deployments
+#
+# IMPORTANT: This script is part of the Phase 9 Kubernetes implementation plan
+# See ROADMAP.md for full details on the planned implementation stages
 
 set -e
 

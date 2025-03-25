@@ -163,7 +163,8 @@ jobs:
             kubectl apply -f k8s/ingress.yaml
             echo "✅ Deployment applied to Kubernetes cluster"
           else
-            echo "🔬 SIMULATION MODE: Simulating kubectl apply"
+            echo "🔬 TEMPORARY SIMULATION MODE: Simulating kubectl apply"
+            echo "Note: Simulation mode is a temporary solution until real Kubernetes clusters are set up"
             echo "📄 Applying manifest: k8s/api-deployment.yaml"
             echo "📄 Applying manifest: k8s/dashboard-deployment.yaml"
             echo "📄 Applying manifest: k8s/ingress.yaml"
@@ -182,7 +183,7 @@ jobs:
             kubectl rollout status deployment/supply-chain-dashboard -n default
             echo "✅ Deployment verification completed"
           else
-            echo "🔬 SIMULATION MODE: Simulating deployment verification"
+            echo "🔬 TEMPORARY SIMULATION MODE: Simulating deployment verification"
             echo "📋 Checking status: deployment/supply-chain-api"
             echo "📋 Checking status: deployment/supply-chain-dashboard"
             echo "✅ Simulation verification completed successfully"
@@ -211,7 +212,8 @@ jobs:
             # Run deployment verification tests
             pytest tests/e2e/test_deployment_verification.py -v
           else
-            echo "🔬 SIMULATION MODE: Simulating deployment verification tests"
+            echo "🔬 TEMPORARY SIMULATION MODE: Simulating deployment verification tests"
+            echo "Note: Full testing will be implemented when real Kubernetes clusters are available"
             echo "📋 Environment: staging"
             echo "📋 Test suite: tests/e2e/test_deployment_verification.py"
             echo "✅ Simulation of verification tests completed successfully"
@@ -315,7 +317,8 @@ jobs:
             kubectl apply -f k8s/ingress.yaml
             echo "✅ Deployment applied to Kubernetes cluster"
           else
-            echo "🔬 SIMULATION MODE: Simulating kubectl apply"
+            echo "🔬 TEMPORARY SIMULATION MODE: Simulating kubectl apply"
+            echo "Note: Simulation mode is a temporary solution until real Kubernetes clusters are set up"
             echo "📄 Applying manifest: k8s/api-deployment.yaml"
             echo "📄 Applying manifest: k8s/dashboard-deployment.yaml"
             echo "📄 Applying manifest: k8s/ingress.yaml"
@@ -334,7 +337,7 @@ jobs:
             kubectl rollout status deployment/supply-chain-dashboard -n default
             echo "✅ Deployment verification completed"
           else
-            echo "🔬 SIMULATION MODE: Simulating deployment verification"
+            echo "🔬 TEMPORARY SIMULATION MODE: Simulating deployment verification"
             echo "📋 Checking status: deployment/supply-chain-api"
             echo "📋 Checking status: deployment/supply-chain-dashboard"
             echo "✅ Simulation verification completed successfully"
@@ -363,7 +366,8 @@ jobs:
             # Run deployment verification tests
             pytest tests/e2e/test_deployment_verification.py -v
           else
-            echo "🔬 SIMULATION MODE: Simulating deployment verification tests"
+            echo "🔬 TEMPORARY SIMULATION MODE: Simulating deployment verification tests"
+            echo "Note: Full testing will be implemented when real Kubernetes clusters are available"
             echo "📋 Environment: production"
             echo "📋 Test suite: tests/e2e/test_deployment_verification.py"
             echo "✅ Simulation of verification tests completed successfully"

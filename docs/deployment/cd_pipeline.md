@@ -61,15 +61,17 @@ The pipeline supports two deployment modes:
    - Automatically used when valid Kubernetes configurations are detected
    - Provides real-world deployment verification
 
-### Forcing Simulation Mode
+### Simulation Mode (Temporary)
 
-For portfolio demonstration or when you don't have access to a Kubernetes cluster, you can force simulation mode using the provided utility script:
+For **temporary** portfolio demonstration or development purposes when Kubernetes infrastructure is not yet available, you can force simulation mode using the provided utility script:
 
 ```bash
 ./scripts/ci_cd_utils.sh force-simulation
 ```
 
 This will set empty values for the Kubernetes configuration secrets, forcing the CD pipeline to use simulation mode.
+
+**Important Note:** Simulation mode is intended as a temporary solution only. The goal is to implement real Kubernetes deployments as part of the Phase 9 work (see ROADMAP.md). When the infrastructure is ready, the CD pipeline will seamlessly transition to real deployments.
 
 ### Setting up Real Deployments
 

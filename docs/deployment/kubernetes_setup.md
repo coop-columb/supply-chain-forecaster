@@ -2,6 +2,13 @@
 
 This guide explains how to set up a Kubernetes cluster for the Continuous Deployment (CD) pipeline of the Supply Chain Forecaster project.
 
+> **IMPORTANT: Implementing Real Kubernetes Deployments**
+> 
+> While the CD pipeline currently supports a simulation mode for development and testing,
+> implementing real Kubernetes deployments is a high-priority task in the project roadmap.
+> This document outlines the steps to set up the necessary infrastructure to transition
+> from simulation to real deployments.
+
 ## Overview
 
 The CD pipeline is designed to support both simulation mode (for testing without real infrastructure) and real mode (deploying to actual Kubernetes clusters). To enable real deployments, you need to:
