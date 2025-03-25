@@ -356,6 +356,28 @@ Fix:
 - Updated the CD workflow to set `DEPLOYMENT_VERIFICATION=true` when running these tests
 - Added clear documentation in the test file explaining their purpose
 
+### 12. CD Environment Setup and Mock Mode Implementation (March 2025)
+
+After setting up the CD pipeline, we encountered issues with Kubernetes configuration and cluster connectivity:
+
+1. **Kubernetes configuration format issues**:
+   - Error: `error loading config file: couldn't get version/kind; json parse error`
+   - Base64-encoded Kubernetes config was not properly formatted
+   - Deployment steps tried to access Kubernetes clusters that weren't available
+
+Fix:
+- Added mock mode to the CD workflow for testing without real Kubernetes clusters
+- Modified the workflow to conditionally skip Kubernetes configuration steps in mock mode
+- Added clear documentation of the mock mode in the CD workflow file
+- Updated GitHub Environments with correctly formatted secrets
+- Successfully tested the CD workflow with mock mode enabled
+
+The mock mode implementation allows:
+- Testing the full CD pipeline without requiring actual Kubernetes clusters
+- Verifying the workflow steps and configuration are correct
+- Staging the transition to real clusters when ready
+- Setting mock mode as the default for easier development
+
 ```python
 # Before
 time_series_fig = create_time_series_chart(df, x='date', y='value', title='Test Time Series')
