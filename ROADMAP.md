@@ -144,6 +144,7 @@ Create a comprehensive supply chain forecasting system that enables:
   - [~] Set up complete CI/CD pipeline for application deployment
       - [x] Create comprehensive workflow configuration file
       - [x] Implement Build and Push Docker Images stage
+      - [x] Create automation script for generating required secrets
       - [ ] Set up GitHub Environments and secrets (required for deployment)
   - [~] Implement automated deployment to staging environment
       - [x] Create workflow configuration

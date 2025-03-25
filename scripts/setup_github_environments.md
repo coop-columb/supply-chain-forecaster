@@ -56,6 +56,24 @@ Some secrets are needed at the repository level:
 
 The `KUBE_CONFIG_STAGING` and `KUBE_CONFIG_PRODUCTION` secrets require base64-encoded Kubernetes configuration files:
 
+### Method 1: Using the Automation Script (Recommended)
+
+We provide an automation script that handles both Kubernetes config and API key generation:
+
+```bash
+# Make the script executable if needed
+chmod +x scripts/generate_cd_secrets.sh
+
+# Run the script
+./scripts/generate_cd_secrets.sh
+```
+
+The script will guide you through the process and save all generated secrets in a `.github_environment_setup` directory.
+
+### Method 2: Manual Generation
+
+If you prefer to generate the files manually:
+
 1. Ensure you have `kubectl` installed and configured for your clusters
 2. For staging environment:
    ```bash
@@ -79,7 +97,9 @@ The `KUBE_CONFIG_STAGING` and `KUBE_CONFIG_PRODUCTION` secrets require base64-en
 
 ## Step 4: Generate API Keys
 
-Create secure API keys for authentication:
+If you used the automation script in Step 3, you can skip this step as the API keys have already been generated.
+
+If you're following the manual process, create secure API keys for authentication:
 
 ```bash
 # Generate a random API key for staging
