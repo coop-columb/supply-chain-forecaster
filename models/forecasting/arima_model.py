@@ -8,6 +8,8 @@ import pandas as pd
 
 from models.base import ModelBase, ModelRegistry
 from utils import get_logger, safe_execute
+from utils.caching import memoize_with_expiry
+from utils.profiling import profile_time
 
 logger = get_logger(__name__)
 
@@ -120,16 +122,46 @@ class ARIMAModel(ModelBase):
         if self.params["auto_arima"]:
             try:
                 import pmdarima as pm
+                from config import config
                 
                 logger.info("Using auto_arima to find best parameters")
                 
-                auto_arima_kwargs = self.params["auto_arima_kwargs"]
-                auto_model = pm.auto_arima(
-                    y,
-                    exogenous=exog,
-                    seasonal=True,
-                    **auto_arima_kwargs,
-                )
+                with profile_time("auto_arima_param_selection", "model"):
+                    # Define default kwargs with efficient settings
+                    default_kwargs = {
+                        "start_p": 0, 
+                        "max_p": 3,
+                        "start_q": 0, 
+                        "max_q": 2,
+                        "seasonal": True,
+                        "m": 7,  # Weekly seasonality
+                        "max_d": 2,
+                        "max_D": 1,
+                        "stepwise": True,  # Faster than exact
+                        "n_jobs": -1,  # Use all CPU cores
+                        "information_criterion": "aic"
+                    }
+                    
+                    # Development mode: use faster parameter search
+                    if hasattr(config, "QUICK_TRAIN_ITERATIONS") and config.QUICK_TRAIN_ITERATIONS:
+                        default_kwargs.update({
+                            "max_p": 1,
+                            "max_q": 1,
+                            "max_d": 1,
+                            "max_D": 0,
+                            "max_order": 2,
+                            "n_fits": config.QUICK_TRAIN_ITERATIONS
+                        })
+                    
+                    # Merge with user-provided kwargs
+                    auto_arima_kwargs = {**default_kwargs, **self.params["auto_arima_kwargs"]}
+                    
+                    # Run auto_arima with optimized settings
+                    auto_model = pm.auto_arima(
+                        y,
+                        exogenous=exog,
+                        **auto_arima_kwargs,
+                    )
                 
                 # Update model parameters with auto_arima results
                 self.params["order"] = auto_model.order
@@ -192,6 +224,7 @@ class ARIMAModel(ModelBase):
         
         return self
 
+    @memoize_with_expiry()
     def predict(
         self,
         X: pd.DataFrame,
@@ -224,50 +257,51 @@ class ARIMAModel(ModelBase):
         
         logger.info(f"Making predictions with ARIMA model {self.name}")
         
-        # Prepare exogenous variables if specified
-        exog = None
-        if exog_cols:
-            exog_cols = [col for col in exog_cols if col in X.columns]
+        with profile_time(f"arima_predict_{self.name}", "model"):
+            # Prepare exogenous variables if specified
+            exog = None
             if exog_cols:
-                exog = X[exog_cols]
-                logger.info(f"Using exogenous variables: {exog_cols}")
-            else:
-                logger.warning("No valid exogenous variables found")
-        
-        # Determine the number of steps to forecast
-        if steps is None:
-            steps = len(X)
-        
-        # Make predictions
-        try:
-            if hasattr(self.model, "get_forecast"):
-                # SARIMAX or ARIMA from statsmodels.tsa.arima.model
-                forecast = self.model.get_forecast(steps=steps, exog=exog, alpha=alpha)
-                predictions = forecast.predicted_mean
-                
-                if return_conf_int:
-                    conf_int = forecast.conf_int(alpha=alpha)
-                    lower = conf_int.iloc[:, 0]
-                    upper = conf_int.iloc[:, 1]
-                    return predictions.values, lower.values, upper.values
+                exog_cols = [col for col in exog_cols if col in X.columns]
+                if exog_cols:
+                    exog = X[exog_cols]
+                    logger.info(f"Using exogenous variables: {exog_cols}")
                 else:
-                    return predictions.values
+                    logger.warning("No valid exogenous variables found")
             
-            elif hasattr(self.model, "predict"):
-                # auto_arima model from pmdarima
-                predictions = self.model.predict(n_periods=steps, exogenous=exog, return_conf_int=return_conf_int, alpha=alpha)
+            # Determine the number of steps to forecast
+            if steps is None:
+                steps = len(X)
+            
+            # Make predictions
+            try:
+                if hasattr(self.model, "get_forecast"):
+                    # SARIMAX or ARIMA from statsmodels.tsa.arima.model
+                    forecast = self.model.get_forecast(steps=steps, exog=exog, alpha=alpha)
+                    predictions = forecast.predicted_mean
+                    
+                    if return_conf_int:
+                        conf_int = forecast.conf_int(alpha=alpha)
+                        lower = conf_int.iloc[:, 0]
+                        upper = conf_int.iloc[:, 1]
+                        return predictions.values, lower.values, upper.values
+                    else:
+                        return predictions.values
                 
-                if return_conf_int:
-                    predictions, conf_int = predictions
-                    lower = conf_int[:, 0]
-                    upper = conf_int[:, 1]
-                    return predictions, lower, upper
+                elif hasattr(self.model, "predict"):
+                    # auto_arima model from pmdarima
+                    predictions = self.model.predict(n_periods=steps, exogenous=exog, return_conf_int=return_conf_int, alpha=alpha)
+                    
+                    if return_conf_int:
+                        predictions, conf_int = predictions
+                        lower = conf_int[:, 0]
+                        upper = conf_int[:, 1]
+                        return predictions, lower, upper
+                    else:
+                        return predictions
+                
                 else:
-                    return predictions
+                    raise AttributeError("Model has no predict or get_forecast method")
             
-            else:
-                raise AttributeError("Model has no predict or get_forecast method")
-        
-        except Exception as e:
-            logger.error(f"Error making predictions: {str(e)}")
-            raise
+            except Exception as e:
+                logger.error(f"Error making predictions: {str(e)}")
+                raise

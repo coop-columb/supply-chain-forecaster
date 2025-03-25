@@ -9,6 +9,8 @@ import pandas as pd
 
 from models.base import ModelBase, ModelRegistry
 from utils import get_logger, safe_execute
+from utils.caching import memoize_with_expiry
+from utils.profiling import profile_time
 
 logger = get_logger(__name__)
 
@@ -108,13 +110,19 @@ class LSTMModel(ModelBase):
         n_samples = len(X_array)
         n_features = X_array.shape[1]
         
-        # Create sequences
-        X_sequences = []
+        if n_samples <= seq_length:
+            # Handle edge case with insufficient samples
+            if y is not None:
+                return np.array([]), np.array([])
+            else:
+                return np.array([]), None
         
-        for i in range(n_samples - seq_length):
-            X_sequences.append(X_array[i:i+seq_length])
+        # Create sequences using numpy operations (much faster than loop)
+        indices = np.arange(n_samples - seq_length + 1)
+        X_sequences = np.zeros((len(indices), seq_length, n_features))
         
-        X_sequences = np.array(X_sequences)
+        for i, start_idx in enumerate(indices):
+            X_sequences[i] = X_array[start_idx:start_idx + seq_length]
         
         # Create target sequences if y is provided
         if y is not None:
@@ -285,6 +293,7 @@ class LSTMModel(ModelBase):
         
         return self
 
+    @memoize_with_expiry()
     def predict(
         self,
         X: pd.DataFrame,
@@ -307,86 +316,88 @@ class LSTMModel(ModelBase):
         
         logger.info(f"Making predictions with LSTM model {self.name}")
         
-        # Scale data if scaler exists
-        X_scaled = X.copy()
-        
-        if hasattr(self, "scaler_X") and self.scaler_X is not None:
-            X_scaled = pd.DataFrame(
-                self.scaler_X.transform(X),
-                columns=X.columns,
-                index=X.index,
-            )
-        
-        seq_length = self.params["sequence_length"]
-        
-        if steps_ahead == 1 and len(X) >= seq_length:
-            # Simple prediction using the last sequence
-            X_seq, _ = self._create_sequences(X_scaled)
+        # Profile prediction time
+        with profile_time(f"lstm_predict_{self.name}", "model"):
+            # Scale data if scaler exists
+            X_scaled = X.copy()
             
-            if len(X_seq) == 0:
-                # If we can't create full sequences, use the last partial sequence
+            if hasattr(self, "scaler_X") and self.scaler_X is not None:
+                X_scaled = pd.DataFrame(
+                    self.scaler_X.transform(X),
+                    columns=X.columns,
+                    index=X.index,
+                )
+            
+            seq_length = self.params["sequence_length"]
+            
+            if steps_ahead == 1 and len(X) >= seq_length:
+                # Simple prediction using the last sequence
+                X_seq, _ = self._create_sequences(X_scaled)
+                
+                if len(X_seq) == 0:
+                    # If we can't create full sequences, use the last partial sequence
+                    X_array = X_scaled.values
+                    if len(X_array) < seq_length:
+                        # Pad with zeros if needed
+                        padding = np.zeros((seq_length - len(X_array), X_array.shape[1]))
+                        X_seq = np.array([np.vstack((padding, X_array))])
+                    else:
+                        X_seq = np.array([X_array[-seq_length:]])
+                
+                predictions = self.model.predict(X_seq)
+                
+                # Unscale predictions if scaler exists
+                if hasattr(self, "scaler_y") and self.scaler_y is not None:
+                    predictions = self.scaler_y.inverse_transform(predictions).flatten()
+                else:
+                    predictions = predictions.flatten()
+                
+                # Extend predictions to match input length
+                if len(predictions) < len(X):
+                    padding = np.full(len(X) - len(predictions), np.nan)
+                    predictions = np.concatenate([padding, predictions])
+                
+                return predictions
+            
+            elif steps_ahead > 1:
+                # Multi-step forecasting
+                predictions = []
+                
+                # Get the initial sequence
                 X_array = X_scaled.values
+                
                 if len(X_array) < seq_length:
                     # Pad with zeros if needed
                     padding = np.zeros((seq_length - len(X_array), X_array.shape[1]))
-                    X_seq = np.array([np.vstack((padding, X_array))])
+                    current_seq = np.vstack((padding, X_array))
                 else:
-                    X_seq = np.array([X_array[-seq_length:]])
-            
-            predictions = self.model.predict(X_seq)
-            
-            # Unscale predictions if scaler exists
-            if hasattr(self, "scaler_y") and self.scaler_y is not None:
-                predictions = self.scaler_y.inverse_transform(predictions).flatten()
-            else:
-                predictions = predictions.flatten()
-            
-            # Extend predictions to match input length
-            if len(predictions) < len(X):
-                padding = np.full(len(X) - len(predictions), np.nan)
-                predictions = np.concatenate([padding, predictions])
-            
-            return predictions
-        
-        elif steps_ahead > 1:
-            # Multi-step forecasting
-            predictions = []
-            
-            # Get the initial sequence
-            X_array = X_scaled.values
-            
-            if len(X_array) < seq_length:
-                # Pad with zeros if needed
-                padding = np.zeros((seq_length - len(X_array), X_array.shape[1]))
-                current_seq = np.vstack((padding, X_array))
-            else:
-                current_seq = X_array[-seq_length:]
-            
-            # Generate predictions one step at a time
-            for _ in range(steps_ahead):
-                # Reshape for prediction
-                X_seq = np.array([current_seq])
+                    current_seq = X_array[-seq_length:]
                 
-                # Predict next value
-                next_value = self.model.predict(X_seq)[0, 0]
-                predictions.append(next_value)
+                # Generate predictions one step at a time
+                for _ in range(steps_ahead):
+                    # Reshape for prediction
+                    X_seq = np.array([current_seq])
+                    
+                    # Predict next value
+                    next_value = self.model.predict(X_seq)[0, 0]
+                    predictions.append(next_value)
+                    
+                    # Update sequence
+                    # This assumes the target is the first feature, adjust as needed
+                    current_seq = np.vstack((current_seq[1:], [X_array[-1]]))
+                    current_seq[-1, 0] = next_value
                 
-                # Update sequence
-                # This assumes the target is the first feature, adjust as needed
-                current_seq = np.vstack((current_seq[1:], [X_array[-1]]))
-                current_seq[-1, 0] = next_value
+                # Unscale predictions if scaler exists
+                predictions = np.array(predictions).reshape(-1, 1)
+                if hasattr(self, "scaler_y") and self.scaler_y is not None:
+                    predictions = self.scaler_y.inverse_transform(predictions).flatten()
+                else:
+                    predictions = predictions.flatten()
+                
+                return predictions
             
-            # Unscale predictions if scaler exists
-            predictions = np.array(predictions).reshape(-1, 1)
-            if hasattr(self, "scaler_y") and self.scaler_y is not None:
-                predictions = self.scaler_y.inverse_transform(predictions).flatten()
             else:
-                predictions = predictions.flatten()
-            
-            return predictions
-        
-        else:
-            raise ValueError("Not enough data to create sequences for prediction")
+                raise ValueError("Not enough data to create sequences for prediction")
 
     def save(self, path: Optional[Union[str, os.PathLike]] = None) -> os.PathLike:
         """

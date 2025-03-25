@@ -6,6 +6,7 @@ from typing import Dict, List, Optional, Union
 
 from models.base import ModelBase, ModelRegistry
 from utils import ModelError, NotFoundError, get_logger, safe_execute
+from utils.caching import ModelCache, model_cache
 
 logger = get_logger(__name__)
 
@@ -99,6 +100,16 @@ class ModelService:
         Returns:
             Loaded model instance.
         """
+        # Create a cache key for the model
+        location = "deployment" if from_deployment else "training"
+        cache_key = f"{model_name}_{model_type}_{location}"
+        
+        # Check if the model is already in cache
+        cached_model = model_cache.get(cache_key)
+        if cached_model is not None:
+            logger.info(f"Loaded model '{model_name}' from cache")
+            return cached_model
+        
         logger.info(f"Loading model '{model_name}' of type '{model_type}'")
         
         # Determine which directory to look in
@@ -127,6 +138,10 @@ class ModelService:
         try:
             model = model_class.load(model_file)
             logger.info(f"Successfully loaded model '{model_name}'")
+            
+            # Cache the model for future use
+            model_cache.put(cache_key, model)
+            
             return model
         except Exception as e:
             raise ModelError(

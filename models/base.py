@@ -5,6 +5,7 @@ import inspect
 import json
 import os
 from abc import ABC, abstractmethod
+from functools import wraps
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Type, Union
 
@@ -14,6 +15,7 @@ import pandas as pd
 
 from config import config
 from utils import ModelError, NotFoundError, get_logger, safe_execute
+from utils.caching import memoize_with_expiry
 
 logger = get_logger(__name__)
 

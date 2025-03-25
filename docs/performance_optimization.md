@@ -1,6 +1,6 @@
 # Performance Optimization Guide
 
-This guide covers the performance optimization strategy for the Supply Chain Forecaster system, including profiling techniques, common bottlenecks, and optimization approaches.
+This guide covers the performance optimization strategy for the Supply Chain Forecaster system, including profiling techniques, implemented optimizations, common bottlenecks, and further optimization approaches.
 
 ## Performance Profiling
 
@@ -32,6 +32,73 @@ Performance data is collected automatically when profiling is enabled. You can:
 1. Access real-time profiling data through the API endpoint: `http://localhost:8000/profiling/stats`
 2. Run the profiling script to collect more detailed data: `python scripts/profile_application.py`
 3. Generate visualizations from profiling data: `python scripts/analyze_profiling.py`
+
+## Implemented Optimizations
+
+The following optimizations have been implemented in the system:
+
+### Model Caching
+
+We've implemented two levels of caching to improve model performance:
+
+1. **Model Instance Caching**: Model instances are now cached in memory using an LRU (Least Recently Used) cache, eliminating redundant model loading from disk.
+
+```python
+# Model caching in ModelService.load_model
+cached_model = model_cache.get(cache_key)
+if cached_model is not None:
+    logger.info(f"Loaded model '{model_name}' from cache")
+    return cached_model
+```
+
+2. **Prediction Result Caching**: Model predictions are cached with expiry times to avoid redundant computations for the same input data.
+
+```python
+# Prediction caching decorator
+@memoize_with_expiry()
+def predict(self, X: pd.DataFrame, steps_ahead: int = 1, **kwargs):
+    # Prediction logic here
+```
+
+### Optimized LSTM Sequence Creation
+
+The LSTM model's sequence creation algorithm has been optimized using vectorized NumPy operations, replacing the previous loop-based implementation:
+
+```python
+# Vectorized implementation
+indices = np.arange(n_samples - seq_length + 1)
+X_sequences = np.zeros((len(indices), seq_length, n_features))
+
+for i, start_idx in enumerate(indices):
+    X_sequences[i] = X_array[start_idx:start_idx + seq_length]
+```
+
+### Auto ARIMA Optimization
+
+The ARIMA model's parameter selection has been optimized to be faster and more efficient:
+
+1. Parallel processing using all available CPU cores (`n_jobs=-1`)
+2. Stepwise parameter search instead of exhaustive grid search
+3. Early stopping based on information criterion
+4. Development mode optimizations for faster experimentation
+
+### Profiling Instrumentation
+
+All critical model operations now include profiling instrumentation to measure performance:
+
+```python
+with profile_time(f"lstm_predict_{self.name}", "model"):
+    # Model prediction logic
+```
+
+### Configurable Caching
+
+Caching behavior can be configured through environment variables or config files:
+
+- `ENABLE_MODEL_CACHING`: Enable/disable model instance caching
+- `MODEL_CACHE_SIZE`: Maximum number of models to cache
+- `ENABLE_RESPONSE_CACHING`: Enable/disable prediction result caching
+- `RESPONSE_CACHE_TTL_SECONDS`: Time-to-live for cached predictions
 
 ## Common Performance Bottlenecks
 

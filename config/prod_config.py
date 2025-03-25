@@ -69,3 +69,9 @@ class ProdConfig(BaseConfig):
     # Enable only temporarily for debugging specific performance issues
     ENABLE_PROFILING = False
     PROFILING_SAMPLE_RATE = 0.01  # Only profile 1% of requests if enabled
+    
+    # Caching is enabled in production for better performance
+    ENABLE_MODEL_CACHING = True
+    MODEL_CACHE_SIZE = 20
+    ENABLE_RESPONSE_CACHING = True
+    RESPONSE_CACHE_TTL_SECONDS = 3600  # 1 hour

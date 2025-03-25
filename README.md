@@ -67,9 +67,9 @@ The project includes a comprehensive monitoring and observability stack:
 
 For more details, see the [Monitoring and Observability Guide](docs/deployment/monitoring.md).
 
-### Performance Profiling
+### Performance Profiling and Optimization
 
-The system includes built-in performance profiling tools to identify bottlenecks:
+The system includes built-in performance profiling and optimization features:
 
 ```bash
 # Run the API with profiling enabled
@@ -80,18 +80,24 @@ python scripts/profile_application.py
 
 # Analyze profiling results
 python scripts/analyze_profiling.py
+
+# Test optimization improvements
+python scripts/run_model_optimization_tests.py
 ```
 
-Profiling helps identify:
-- Slow API endpoints
-- Inefficient model training or inference
-- Dashboard loading bottlenecks
-- Memory usage patterns
+Performance features include:
+- Comprehensive profiling for API endpoints, models, and dashboard components
+- Model instance caching to reduce load times
+- Prediction result caching to avoid redundant computations
+- Optimized LSTM sequence creation algorithms
+- Efficient ARIMA parameter selection
 
 Access profiling data directly via the API endpoint:
 ```
 http://localhost:8000/profiling/stats
 ```
+
+All caching behavior is configurable via environment variables or configuration files.
 
 ## Deployment
 

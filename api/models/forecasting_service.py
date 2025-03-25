@@ -11,6 +11,8 @@ from api.models.model_service import ModelService
 from models.base import ModelBase
 from models.forecasting import ARIMAModel, LSTMModel, ProphetModel, XGBoostModel
 from utils import ModelError, get_logger, time_series_cross_validation
+from utils.caching import memoize_with_expiry
+from utils.profiling import profile_time
 
 logger = get_logger(__name__)
 
@@ -224,6 +226,7 @@ class ForecastingService:
                 f"Error during cross-validation: {str(e)}", model_name=model_type
             )
 
+    @memoize_with_expiry()
     def forecast(
         self,
         model_name: str,
@@ -251,23 +254,24 @@ class ForecastingService:
         """
         logger.info(f"Generating forecast with model '{model_name}' for {steps} steps")
         
-        try:
-            # Load model
-            model = self.model_service.load_model(
-                model_name, model_type, from_deployment=from_deployment
-            )
-            
-            # Generate forecast
-            if return_conf_int and hasattr(model, "predict") and "return_conf_int" in model.predict.__code__.co_varnames:
-                predictions, lower, upper = model.predict(
-                    X, steps=steps, return_conf_int=True, **kwargs
+        with profile_time(f"forecast_{model_type}_{model_name}", "api"):
+            try:
+                # Load model
+                model = self.model_service.load_model(
+                    model_name, model_type, from_deployment=from_deployment
                 )
-                return predictions, lower, upper
-            else:
-                predictions = model.predict(X, steps=steps, **kwargs)
-                return predictions
-        
-        except Exception as e:
-            raise ModelError(
-                f"Error generating forecast: {str(e)}", model_name=model_name
-            )
+                
+                # Generate forecast
+                if return_conf_int and hasattr(model, "predict") and "return_conf_int" in model.predict.__code__.co_varnames:
+                    predictions, lower, upper = model.predict(
+                        X, steps=steps, return_conf_int=True, **kwargs
+                    )
+                    return predictions, lower, upper
+                else:
+                    predictions = model.predict(X, steps=steps, **kwargs)
+                    return predictions
+            
+            except Exception as e:
+                raise ModelError(
+                    f"Error generating forecast: {str(e)}", model_name=model_name
+                )

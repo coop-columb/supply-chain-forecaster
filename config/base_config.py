@@ -80,6 +80,12 @@ class BaseConfig:
     # Performance profiling configuration
     ENABLE_PROFILING = os.getenv("ENABLE_PROFILING", "False").lower() == "true"
     PROFILING_SAMPLE_RATE = float(os.getenv("PROFILING_SAMPLE_RATE", "0.1"))  # Sample 10% of requests by default
+    
+    # Caching configuration
+    ENABLE_MODEL_CACHING = os.getenv("ENABLE_MODEL_CACHING", "False").lower() == "true"
+    MODEL_CACHE_SIZE = int(os.getenv("MODEL_CACHE_SIZE", "10"))
+    ENABLE_RESPONSE_CACHING = os.getenv("ENABLE_RESPONSE_CACHING", "False").lower() == "true"
+    RESPONSE_CACHE_TTL_SECONDS = int(os.getenv("RESPONSE_CACHE_TTL_SECONDS", "3600"))  # 1 hour
 
     def as_dict(self) -> Dict[str, Union[str, int, bool, List[int]]]:
         """Return configuration as a dictionary."""
