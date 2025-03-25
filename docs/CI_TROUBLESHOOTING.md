@@ -370,12 +370,20 @@ After setting up the CD pipeline, we encountered issues with Kubernetes configur
    - The workflow was failing because `github.event.inputs.mock_mode` was undefined in push events
    - This created unpredictable behavior between push-triggered and manually-triggered workflows
 
-3. **Final Solution - Dual-Mode Architecture**:
+3. **GitHub Actions and Local Kubernetes Integration Challenges**:
+   - Discovered that GitHub Actions runners cannot directly access locally hosted Kubernetes clusters
+   - Attempted various approaches to provide kubeconfig for local clusters to GitHub Actions
+   - Base64 encoding and different format adjustments did not resolve the fundamental connectivity issue
+   - Created cloud-based setup scripts (GKE, AKS, EKS) as the recommended solution
+   - Continuing to investigate alternative approaches for local Kubernetes integration with GitHub Actions
+
+4. **Final Solution - Dual-Mode Architecture**:
    - Implemented a robust approach that supports both simulation and real deployments
    - Used a clear, explicit mode determination step at the beginning of each job
    - Default mode is simulation for automated workflows and safe testing
-   - Optional real deployment mode available for manual workflow runs
+   - Optional real deployment mode available for manual workflow runs with cloud-based Kubernetes
    - All conditional logic now uses the derived mode value, ensuring consistency
+   - Created cloud-based Kubernetes setup scripts as the recommended path for real deployments
 
 The dual-mode architecture offers:
 - Sophisticated deployment strategy with fallback simulation capabilities

@@ -14,9 +14,12 @@ The CD pipeline automates the process of building, testing, and deploying the ap
 - ✅ The build and push Docker images stage is functional
 - ✅ GitHub Environments have been configured for staging and production
 - ✅ The workflow supports both simulation and real deployment modes
+- ✅ Cloud-based Kubernetes setup scripts (GKE, AKS, EKS) are implemented
 - ✅ The workflow has been successfully tested and verified
 - ✅ Default mode is simulation for safe CI/CD without requiring Kubernetes clusters
 - ✅ Optional real deployment mode for actual production deployments when needed
+
+We continue to investigate alternative approaches for local Kubernetes integration with GitHub Actions, which would provide more flexibility for development and testing environments.
 
 See [Setting Up GitHub Environments](../../scripts/setup_github_environments.md) for details on the environment configuration.
 

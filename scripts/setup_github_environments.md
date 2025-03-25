@@ -100,9 +100,36 @@ To use real deployment mode, which performs actual Kubernetes deployments:
    - Check the "real_deployment" option
    - Click "Run workflow"
 
-## Generating Kubernetes Configs for Real Deployment
+## Setting Up Real Kubernetes Deployments
 
-If you're setting up real deployment mode, you can use the provided script to generate the necessary Kubernetes configurations:
+For real Kubernetes deployments, you have two options:
+
+### Option 1: Cloud-Based Kubernetes Clusters (Recommended)
+
+We provide scripts to set up cloud-based Kubernetes clusters that work seamlessly with GitHub Actions:
+
+```bash
+# For Google Kubernetes Engine (GKE)
+./scripts/cloud-setup/setup_gke_cluster.sh
+
+# For Azure Kubernetes Service (AKS)
+./scripts/cloud-setup/setup_aks_cluster.sh
+
+# For Amazon EKS
+./scripts/cloud-setup/setup_eks_cluster.sh
+```
+
+These scripts will:
+1. Create a cloud-based Kubernetes cluster
+2. Configure it for use with the CD pipeline
+3. Generate the required kubeconfig files
+4. Guide you on setting up GitHub environment secrets
+
+See `scripts/cloud-setup/README.md` for more details.
+
+### Option 2: Manual Configuration
+
+If you're using an existing Kubernetes cluster, you can use the provided script to generate the necessary Kubernetes configurations:
 
 ```bash
 # Make the script executable

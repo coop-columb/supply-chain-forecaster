@@ -1,94 +1,77 @@
 #!/bin/bash
-# Script to generate secrets for GitHub Environments CD setup
-# This script helps generate all the necessary secrets for real deployment mode
+# Script to generate Kubernetes configuration secrets for the CD pipeline
 
-# Stop on error
 set -e
 
-echo "=== Supply Chain Forecaster: Kubernetes Configuration Generator ==="
+echo "=== Supply Chain Forecaster: Generate CD Secrets ==="
 echo ""
-echo "This script will generate Kubernetes configurations and API keys required"
-echo "for the real deployment mode of the CD pipeline."
-echo ""
-echo "Note: By default, the CD pipeline uses simulation mode, which doesn't require"
-echo "these configurations. You only need to run this script if you want to use"
-echo "real deployment mode."
-echo ""
-echo "This script will generate:"
-echo "1. Base64-encoded Kubernetes configs for staging and production"
-echo "2. Random API keys for both environments"
-echo ""
-echo "You'll need to add these secrets to your GitHub repository environments manually."
+echo "This script helps you generate the required Kubernetes configuration"
+echo "secrets for the Continuous Deployment (CD) pipeline."
 echo ""
 
-# Confirm the user wants to proceed
-read -p "Do you want to continue? (y/n) " -n 1 -r
-echo ""
-if [[ ! $REPLY =~ ^[Yy]$ ]]
-then
-    echo "Operation cancelled."
-    exit 0
+# Check for kubectl
+if ! command -v kubectl &> /dev/null; then
+    echo "Error: kubectl is not installed. Please install it first."
+    exit 1
 fi
 
-# Create an output directory if it doesn't exist
+# Check for valid kubeconfig
+if ! kubectl cluster-info &> /dev/null; then
+    echo "Error: Unable to connect to Kubernetes cluster."
+    echo "Please make sure your kubeconfig is correctly set up."
+    exit 1
+fi
+
+# Create output directory
 mkdir -p .github_environment_setup
 
-# Generate Kubernetes configs for staging
-echo ""
-echo "Generating Kubernetes config for staging environment..."
-echo "Please switch kubectl to your staging context now if needed."
-read -p "Press Enter to continue or Ctrl+C to abort..."
+# Generate kubeconfig for GitHub secrets
+echo "Generating kubeconfig files for GitHub Actions..."
+KUBE_CONFIG_PATH=".github_environment_setup/kube_config.yaml"
+kubectl config view --raw > "$KUBE_CONFIG_PATH"
 
-kubectl config view --raw > .github_environment_setup/kube_config_staging.yaml
-cat .github_environment_setup/kube_config_staging.yaml | base64 > .github_environment_setup/kube_config_staging_base64.txt
+# Base64 encode the kubeconfig
+if [[ "$(uname)" == "Darwin" ]]; then
+    # macOS requires the -b 0 flag to disable line wrapping
+    base64 -b 0 < "$KUBE_CONFIG_PATH" > ".github_environment_setup/kube_config_base64.txt"
+else
+    # Linux (and others) don't need the flag
+    base64 -w 0 < "$KUBE_CONFIG_PATH" > ".github_environment_setup/kube_config_base64.txt"
+fi
 
-# Generate Kubernetes configs for production
-echo ""
-echo "Generating Kubernetes config for production environment..."
-echo "Please switch kubectl to your production context now if needed."
-read -p "Press Enter to continue or Ctrl+C to abort..."
+# Create API keys for staging and production
+STAGING_API_KEY="staging-api-key-$(date +%s)"
+PRODUCTION_API_KEY="production-api-key-$(date +%s)"
 
-kubectl config view --raw > .github_environment_setup/kube_config_production.yaml
-cat .github_environment_setup/kube_config_production.yaml | base64 > .github_environment_setup/kube_config_production_base64.txt
+echo "Generated staging API key: $STAGING_API_KEY"
+echo "Generated production API key: $PRODUCTION_API_KEY"
 
-# Generate API keys
+# Print instructions
 echo ""
-echo "Generating random API keys..."
-openssl rand -hex 32 > .github_environment_setup/api_key_staging.txt
-openssl rand -hex 32 > .github_environment_setup/api_key_production.txt
+echo "===== GitHub Environment Setup Instructions ====="
+echo ""
+echo "1. Go to your GitHub repository settings"
+echo "2. Navigate to Environments"
+echo "3. Select or create the 'staging' environment"
+echo "4. Add the following secrets:"
+echo "   - KUBE_CONFIG_STAGING: Copy the contents of .github_environment_setup/kube_config_base64.txt"
+echo "   - API_KEY_STAGING: $STAGING_API_KEY"
+echo "5. Select or create the 'production' environment"
+echo "6. Add the following secrets:"
+echo "   - KUBE_CONFIG_PRODUCTION: Copy the contents of .github_environment_setup/kube_config_base64.txt"
+echo "   - API_KEY_PRODUCTION: $PRODUCTION_API_KEY"
+echo ""
+echo "The kubeconfig has been saved to .github_environment_setup/kube_config.yaml"
+echo "The base64-encoded kubeconfig has been saved to .github_environment_setup/kube_config_base64.txt"
+echo ""
+echo "To verify your setup, run the validation script:"
+echo "./scripts/validate_cd_workflow.sh"
+echo ""
+echo "After setting up the GitHub environment secrets, you can run the CD workflow:"
+echo "gh workflow run 'Continuous Deployment' -f environment=staging -f real_deployment=true"
+echo ""
+echo "IMPORTANT: The .github_environment_setup directory contains sensitive information."
+echo "          Do not commit it to your repository. Run 'scripts/cleanup_temp_files.sh'"
+echo "          when you're done to remove it securely."
 
-echo ""
-echo "Secret generation complete!"
-echo ""
-echo "Secret files are stored in the .github_environment_setup directory:"
-echo "- kube_config_staging_base64.txt: Base64-encoded Kubernetes config for staging"
-echo "- kube_config_production_base64.txt: Base64-encoded Kubernetes config for production"
-echo "- api_key_staging.txt: API key for staging"
-echo "- api_key_production.txt: API key for production"
-echo ""
-echo "NEXT STEPS:"
-echo ""
-echo "1. Go to your GitHub repository Settings > Environments"
-echo "2. Confirm you have two environments created:"
-echo "   - staging"
-echo "   - production"
-echo ""
-echo "3. Add these secrets to each environment:"
-echo "   - For staging:"
-echo "     - KUBE_CONFIG_STAGING: content of kube_config_staging_base64.txt"
-echo "     - API_KEY_STAGING: content of api_key_staging.txt"
-echo ""
-echo "   - For production:"
-echo "     - KUBE_CONFIG_PRODUCTION: content of kube_config_production_base64.txt"
-echo "     - API_KEY_PRODUCTION: content of api_key_production.txt"
-echo ""
-echo "4. To use real deployment mode:"
-echo "   - Go to the Actions tab in your repository"
-echo "   - Select the 'Continuous Deployment' workflow"
-echo "   - Click 'Run workflow'"
-echo "   - Select the environment (staging or production)"
-echo "   - Check the 'real_deployment' option"
-echo "   - Click 'Run workflow'"
-echo ""
-echo "IMPORTANT: Delete the .github_environment_setup directory after adding the secrets to GitHub"
-echo "           as these are sensitive credentials."
+exit 0

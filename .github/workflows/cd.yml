@@ -20,6 +20,11 @@ on:
         description: 'Version tag to deploy (defaults to "latest")'
         required: false
         type: string
+      real_deployment:
+        description: 'Force real deployment mode (requires Kubernetes configs to be set up)'
+        required: false
+        default: false
+        type: boolean
 
 env:
   REGISTRY: ghcr.io

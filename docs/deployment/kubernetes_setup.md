@@ -2,12 +2,16 @@
 
 This guide explains how to set up a Kubernetes cluster for the Continuous Deployment (CD) pipeline of the Supply Chain Forecaster project.
 
-> **IMPORTANT: Implementing Real Kubernetes Deployments**
+> **IMPORTANT: Kubernetes Deployment Status**
 > 
-> While the CD pipeline currently supports a simulation mode for development and testing,
-> implementing real Kubernetes deployments is a high-priority task in the project roadmap.
-> This document outlines the steps to set up the necessary infrastructure to transition
-> from simulation to real deployments.
+> The CD pipeline supports both simulation mode (for development and testing) and real 
+> Kubernetes deployments using cloud-based clusters. Cloud-based clusters (GKE, AKS, EKS) 
+> have been implemented and are the recommended approach for production environments.
+>
+> We are also actively investigating alternative approaches for local Kubernetes integration 
+> with GitHub Actions, which would provide more flexibility for development and testing.
+> Currently, local clusters can be used for development but aren't directly accessible 
+> to GitHub Actions runners.
 
 ## Overview
 
@@ -27,6 +31,8 @@ For local development or demonstration purposes, you can use a lightweight local
 > - Preparing for cloud-based deployments
 >
 > For CI/CD integration, consider using Option 2 (cloud-based clusters) which are accessible from the GitHub Actions runners.
+>
+> We are actively investigating alternative approaches for integrating local Kubernetes clusters with GitHub Actions. See [local_k8s_github_actions.md](local_k8s_github_actions.md) for more details on our ongoing research.
 
 ### Prerequisites
 
