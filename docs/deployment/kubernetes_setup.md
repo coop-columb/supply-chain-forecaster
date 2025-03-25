@@ -21,6 +21,13 @@ The CD pipeline is designed to support both simulation mode (for testing without
 
 For local development or demonstration purposes, you can use a lightweight local Kubernetes cluster. We provide a script that automates the setup of a k3d-based Kubernetes cluster.
 
+> **Important Note**: While a local k3d cluster is useful for development and testing, it has limitations for CI/CD integration with GitHub Actions. The GitHub Actions runner cannot directly access a locally hosted Kubernetes cluster, making this option primarily useful for:
+> - Local development and testing
+> - Understanding Kubernetes concepts
+> - Preparing for cloud-based deployments
+>
+> For CI/CD integration, consider using Option 2 (cloud-based clusters) which are accessible from the GitHub Actions runners.
+
 ### Prerequisites
 
 - Docker (installed and running)
@@ -40,13 +47,32 @@ For local development or demonstration purposes, you can use a lightweight local
    - Create a local Kubernetes cluster
    - Configure it for use with the CD pipeline
    - Generate the required kubeconfig files
-   - Guide you on setting up GitHub environment secrets
+   - Guide you on setting up GitHub repository environments
 
-3. Follow the instructions from the script to configure GitHub repository environments.
+3. While the script provides instructions for GitHub environment setup, note that GitHub Actions runners will not be able to directly access your local cluster. For proper CI/CD integration with real deployments, see Option 2 below.
 
 ## Option 2: Cloud Provider Kubernetes Service
 
-For a more production-like environment, you can use a managed Kubernetes service from a cloud provider.
+For a more production-like environment, you can use a managed Kubernetes service from a cloud provider. We provide automation scripts to make this process easier:
+
+```bash
+# For Google Kubernetes Engine (GKE)
+./scripts/cloud-setup/setup_gke_cluster.sh
+
+# For Azure Kubernetes Service (AKS)
+./scripts/cloud-setup/setup_aks_cluster.sh
+
+# For Amazon EKS
+./scripts/cloud-setup/setup_eks_cluster.sh
+```
+
+These scripts will:
+1. Create a cloud-based Kubernetes cluster
+2. Configure it for use with the CD pipeline
+3. Generate the required kubeconfig files
+4. Guide you on setting up GitHub environment secrets
+
+For manual setup instructions, see the sections below:
 
 ### Option 2A: Google Kubernetes Engine (GKE)
 
