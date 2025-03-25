@@ -5,6 +5,11 @@ These tests verify that a deployment is functioning correctly by checking:
 1. API endpoints are accessible and responding correctly
 2. Dashboard is accessible and loads properly
 3. Basic functionality works end-to-end
+
+Note: These tests are designed to be run against a deployed environment,
+not during regular CI testing. They will be skipped during CI and only
+run when explicitly called from the CD pipeline with proper environment
+variables set.
 """
 
 import os
@@ -13,6 +18,12 @@ from urllib.parse import urljoin
 
 import pytest
 import requests
+
+# Skip all tests in this file unless DEPLOYMENT_VERIFICATION environment variable is set
+pytestmark = pytest.mark.skipif(
+    os.environ.get("DEPLOYMENT_VERIFICATION") != "true",
+    reason="Deployment verification tests only run when explicitly enabled",
+)
 
 # Set default timeout for all requests
 TIMEOUT = 10

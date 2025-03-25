@@ -145,6 +145,7 @@ jobs:
           export DASHBOARD_BASE_URL="https://dashboard-staging.supply-chain-forecaster.example.com"
           export DEPLOYMENT_ENV="staging"
           export API_KEY="${{ secrets.API_KEY_STAGING }}"
+          export DEPLOYMENT_VERIFICATION="true"
           
           # Install test dependencies
           pip install pytest requests
@@ -210,6 +211,7 @@ jobs:
           export DASHBOARD_BASE_URL="https://supply-chain-forecaster.example.com"
           export DEPLOYMENT_ENV="production"
           export API_KEY="${{ secrets.API_KEY_PRODUCTION }}"
+          export DEPLOYMENT_VERIFICATION="true"
           
           # Install test dependencies
           pip install pytest requests
