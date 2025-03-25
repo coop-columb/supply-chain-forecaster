@@ -20,6 +20,7 @@ The API is organized into the following sections:
 - **Forecasting**: Endpoints for training forecasting models and generating predictions
 - **Predictions**: Endpoints for making predictions with trained models
 - **Anomalies**: Endpoints for anomaly detection
+- **Dashboard Cache**: Endpoints for managing dashboard component cache
 
 ## Swagger Documentation
 
@@ -706,6 +707,48 @@ curl -X POST "http://localhost:8000/forecasting/forecast" \
 curl -X POST "http://localhost:8000/anomalies/detect" \
   -F "file=@data.csv" \
   -F "params={\"model_name\":\"InventoryAnomaly\",\"model_type\":\"IsolationForestDetector\",\"feature_columns\":[\"demand\",\"inventory\",\"lead_time\"],\"return_details\":true}"
+```
+
+## Dashboard Cache Management Endpoints
+
+The dashboard includes endpoints for managing the component cache to optimize performance.
+
+### Get Cache Statistics
+
+```
+GET /dashboard/cache/stats
+```
+
+Returns statistics about the dashboard component cache.
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "cache_stats": {
+    "total_entries": 15,
+    "active_entries": 12,
+    "expired_entries": 3
+  },
+  "timestamp": 1711398245.123456
+}
+```
+
+### Clear Cache
+
+```
+POST /dashboard/cache/clear
+```
+
+Clears the dashboard component cache, removing all cached components.
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "message": "Dashboard component cache cleared",
+  "timestamp": 1711398245.123456
+}
 ```
 
 ## Next Steps
